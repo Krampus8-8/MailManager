@@ -62,7 +62,7 @@ public sealed class RegistrationViewModel : PageViewModel
                 return;
 
             GmailExtensionArchive.Save(destination);
-            shell.Report("Расширение сохранено. Распакуйте ZIP и загрузите папку с manifest.json в Chrome или Edge.");
+            shell.Report("ZIP сохранён. Распакуйте его и выберите папку GmailExtension в меню расширений браузера.");
         }), () => ShowGmailProfile && CanRegister);
         SaveTaskCommand = shell.Action(() => shell.RunAsync(async () =>
         {

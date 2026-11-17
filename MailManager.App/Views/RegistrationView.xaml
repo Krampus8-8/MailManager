@@ -76,6 +76,18 @@
                         <Button Content="Сохранить расширение для Chrome и Edge…" Command="{Binding SaveGmailExtensionCommand}"
                                 Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Margin="0,2,0,0"
                                 Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
+                        <StackPanel Margin="0,7,0,4" Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}">
+                            <TextBlock Text="Как установить расширение" Style="{StaticResource FieldTitle}"/>
+                            <TextBlock Style="{StaticResource MutedText}">
+                                <Run Text="1. Распакуйте GmailExtension.zip."/>
+                                <LineBreak/>
+                                <Run Text="2. В адресной строке браузера откройте chrome://extensions в Chrome или edge://extensions в Edge."/>
+                                <LineBreak/>
+                                <Run Text="3. Включите «Режим разработчика» и нажмите «Загрузить распакованное расширение»."/>
+                                <LineBreak/>
+                                <Run Text="4. Выберите папку GmailExtension, внутри которой лежит manifest.json, и нажмите «Выбор папки»."/>
+                            </TextBlock>
+                        </StackPanel>
                         <TextBlock Text="Вставьте данные в боковую панель расширения. Если Google запросит номер телефона, подтвердите его на сайте."
                                    Style="{StaticResource MutedText}" Margin="0,7,0,0"
                                    Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
