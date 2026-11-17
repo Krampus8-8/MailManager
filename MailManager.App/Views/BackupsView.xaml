@@ -1,0 +1,38 @@
+<UserControl x:Class="MailManager.App.Views.BackupsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Style="{StaticResource PageFade}">
+    <StackPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE74E;" FontSize="25" HorizontalAlignment="Left" Margin="0,0,0,12"/>
+                    <TextBlock Text="Создать копию" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="Выберите папку и имя файла. Снимок включает аккаунты, очередь, историю и настройки."
+                               Style="{StaticResource MutedText}" Margin="0,8,0,15"/>
+                    <Button Content="Сохранить копию…" Command="{Binding CreateCommand}" Style="{StaticResource PrimaryButton}"
+                            HorizontalAlignment="Left"/>
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE777;" FontSize="25" HorizontalAlignment="Left" Margin="0,0,0,12"/>
+                    <TextBlock Text="Восстановить данные" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="Выберите файл копии. После проверки целостности и вашего подтверждения он заменит текущие данные."
+                               Style="{StaticResource MutedText}" Margin="0,8,0,15"/>
+                    <Button Content="Выбрать копию…" Command="{Binding RestoreCommand}" Style="{StaticResource OutlineButton}"
+                            HorizontalAlignment="Left"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+        <Border Style="{StaticResource EmptyCard}" Margin="0,14,0,0">
+            <TextBlock Text="Для расшифровки сохранённых паролей нужен исходный профиль Windows. Остальные записи доступны при переносе копии."
+                       Style="{StaticResource MutedText}"/>
+        </Border>
+    </StackPanel>
+</UserControl>

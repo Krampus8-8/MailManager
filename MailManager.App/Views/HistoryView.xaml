@@ -1,0 +1,20 @@
+<UserControl x:Class="MailManager.App.Views.HistoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Style="{StaticResource PageFade}">
+    <Border Style="{StaticResource Card}">
+        <StackPanel>
+            <TextBlock Text="Последние события" Style="{StaticResource SectionTitle}" Margin="0,0,0,14"/>
+            <Border Style="{StaticResource EmptyCard}" Visibility="{Binding IsEmpty, Converter={StaticResource VisibleWhen}}">
+                <TextBlock Text="Журнал пока пуст." Style="{StaticResource MutedText}"/>
+            </Border>
+            <DataGrid ItemsSource="{Binding Rows}" MaxHeight="540" Visibility="{Binding IsEmpty, Converter={StaticResource HiddenWhen}}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Время" Binding="{Binding Date, StringFormat={}{0:dd.MM.yyyy HH:mm:ss}}" Width="180"/>
+                    <DataGridTextColumn Header="Действие" Binding="{Binding Action}" Width="1.1*"/>
+                    <DataGridTextColumn Header="Запись" Binding="{Binding Subject}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </StackPanel>
+    </Border>
+</UserControl>

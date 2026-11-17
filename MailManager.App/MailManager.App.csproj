@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>MailManager</AssemblyName>
+    <ApplicationIcon>Resources/MailManager.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Resources/MailManager.ico" />
+    <ProjectReference Include="../MailManager.Core/MailManager.Core.csproj" />
+    <ProjectReference Include="../MailManager.Data/MailManager.Data.csproj" />
+  </ItemGroup>
+</Project>

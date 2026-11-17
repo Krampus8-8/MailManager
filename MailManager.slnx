@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="MailManager.App/MailManager.App.csproj" />
+  <Project Path="MailManager.Core/MailManager.Core.csproj" />
+  <Project Path="MailManager.Data/MailManager.Data.csproj" />
+  <Project Path="MailManager.Tests/MailManager.Tests.csproj" />
+</Solution>
