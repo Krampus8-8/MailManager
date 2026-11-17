@@ -13,6 +13,7 @@ internal sealed class UpdateStage(string folder)
 
     internal string Name => Path.GetFileName(folder);
     internal string Payload => Path.Combine(folder, "MailManager.update.exe");
+    internal string Patch => Path.Combine(folder, "MailManager.delta");
     internal string Replacement => Path.Combine(folder, "MailManager.new.exe");
     internal string Backup => Path.Combine(folder, "MailManager.previous.exe");
     internal string Ready => Path.Combine(folder, "ready");
@@ -48,7 +49,7 @@ internal sealed class UpdateStage(string folder)
     {
         try
         {
-            foreach (var file in new[] { Payload, Replacement, Backup, Ready, Started })
+            foreach (var file in new[] { Payload, Patch, Replacement, Backup, Ready, Started })
                 File.Delete(file);
             Directory.Delete(folder);
         }

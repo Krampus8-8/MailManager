@@ -190,8 +190,9 @@ public sealed class ShellViewModel : ViewModel
             UpdateStage? stage = null;
             try
             {
+                var executable = Environment.ProcessPath!;
                 string? token = null;
-                var check = await source.CheckAsync(token, UpdateInstaller.CurrentVersion, limit.Token);
+                var check = await source.CheckAsync(token, UpdateInstaller.CurrentVersion, limit.Token, executable);
                 if (check.RequiresSignIn)
                 {
                     token = await source.GetTokenAsync(interactive: false);
@@ -208,7 +209,7 @@ public sealed class ShellViewModel : ViewModel
                             throw new InputException("Вход в GitHub не завершён. Нажмите «Обновить», чтобы повторить.");
                     }
 
-                    check = await source.CheckAsync(token, UpdateInstaller.CurrentVersion, limit.Token);
+                    check = await source.CheckAsync(token, UpdateInstaller.CurrentVersion, limit.Token, executable);
                 }
 
                 var release = check.Release;
@@ -218,11 +219,26 @@ public sealed class ShellViewModel : ViewModel
                     return;
                 }
 
-                var executable = Environment.ProcessPath!;
+                if (release.Delta is null && !Desktop.Confirm(
+                    $"Для этой сборки нет дельта-патча. Скачать полный EXE ({release.Full.Size / 1_000_000d:F1} МБ)?", "Обновление Mail Manager"))
+                {
+                    Report("Обновление отменено.");
+                    return;
+                }
+
                 stage = UpdateStage.Create(executable);
-                Report($"Скачиваем Mail Manager {release.Version}…");
-                await source.DownloadAsync(release, token, stage.Payload,
-                    progress => Report($"Скачиваем Mail Manager {release.Version} · {progress} %"), limit.Token);
+                if (release.Delta is { } delta)
+                {
+                    Report($"Скачиваем патч Mail Manager {release.Version} · {delta.Size:N0} байт");
+                    await source.ApplyDeltaAsync(release, token, executable, stage,
+                        progress => Report($"Скачиваем патч Mail Manager {release.Version} · {progress} %"), limit.Token);
+                }
+                else
+                {
+                    Report($"Скачиваем Mail Manager {release.Version}…");
+                    await source.DownloadAsync(release, token, stage.Payload,
+                        progress => Report($"Скачиваем Mail Manager {release.Version} · {progress} %"), limit.Token);
+                }
                 Report("Устанавливаем обновление и перезапускаем приложение…");
                 await UpdateInstaller.HandOffAsync(stage, executable, release);
                 restart = true;

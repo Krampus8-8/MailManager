@@ -6,7 +6,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AssemblyName>MailManager</AssemblyName>
     <ApplicationIcon>Resources/MailManager.ico</ApplicationIcon>
-    <Version>1.2.3</Version>
+    <Version>1.3.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="Resources/MailManager.ico" />

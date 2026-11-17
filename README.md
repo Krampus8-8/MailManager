@@ -6,7 +6,7 @@ Mail Manager — локальное Windows-приложение для учёт
 
 Скачайте [MailManager.exe для Windows x64](https://github.com/Krampus8-8/MailManager/releases/latest/download/MailManager.exe) и запустите его. Среда .NET Desktop Runtime входит в сборку. При первом запуске приложение создаст базу `%LOCALAPPDATA%\MailManager\mailmanager.sqlite`.
 
-Нажмите **Обновить** в правом верхнем углу окна, чтобы проверить новую версию. Mail Manager скачает публичный релиз, проверит SHA-256 сборки и перезапустится. Если релиз доступен только участникам репозитория, приложение использует Git Credential Manager из Git for Windows.
+Нажмите **Обновить** в правом верхнем углу окна, чтобы проверить новую версию. Если в релизе есть патч для установленного EXE, Mail Manager скачает патч, соберёт новый EXE, проверит его SHA-256 и перезапустится. Когда готового патча нет, приложение предложит скачать полную сборку. Для закрытых релизов используется Git Credential Manager из Git for Windows.
 
 Для сборки установите [SDK .NET 10](https://dotnet.microsoft.com/download/dotnet/10.0). Для среды разработки подойдёт Visual Studio 2026 с компонентом SDK .NET 10 и рабочей нагрузкой «Разработка классических приложений .NET». Проверьте редакцию и сборку Windows 10 или Windows 11 по [матрице поддержки Microsoft](https://learn.microsoft.com/dotnet/core/install/windows#supported-versions).
 
@@ -30,6 +30,14 @@ dotnet publish MailManager.App -c Release -r win-x64 --self-contained true -p:Pu
 ```
 
 Готовый файл будет в `artifacts/win-x64/MailManager.exe`. Для Windows на ARM используйте RID `win-arm64` и отдельный каталог публикации.
+
+Для выпуска дельта-обновления передайте генератору новый EXE и оригинальные EXE версий, с которых нужно обновляться:
+
+```powershell
+dotnet run --project tools/UpdateDelta -c Release -- artifacts/v1.3.0/MailManager.exe artifacts/v1.3.0 artifacts/v1.2.3/MailManager.exe
+```
+
+Генератор проверит побайтовое совпадение восстановленного EXE с новой сборкой. Приложите полученные `MailManager-from-*.delta` к релизу GitHub вместе с `MailManager.exe`. Для каждого исходного EXE создаётся свой патч.
 
 ## Одиночная регистрация и очередь
 

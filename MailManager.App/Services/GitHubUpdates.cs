@@ -10,7 +10,11 @@ using MailManager.Core.Services;
 
 namespace MailManager.App.Services;
 
-internal sealed record UpdateRelease(Version Version, long AssetId, long Size, byte[] Digest);
+internal sealed record UpdateAsset(string Name, long Id, long Size, byte[] Digest);
+internal sealed record UpdateRelease(Version Version, UpdateAsset Full, UpdateAsset? Delta)
+{
+    internal byte[] Digest => Full.Digest;
+}
 internal sealed record UpdateCheck(UpdateRelease? Release, bool RequiresSignIn = false);
 
 internal sealed class GitHubUpdates
@@ -86,7 +90,8 @@ internal sealed class GitHubUpdates
         }
     }
 
-    internal async Task<UpdateCheck> CheckAsync(string? token, Version currentVersion, CancellationToken cancellationToken)
+    internal async Task<UpdateCheck> CheckAsync(string? token, Version currentVersion, CancellationToken cancellationToken,
+        string? executable = null)
     {
         using var response = await GetAsync(new Uri(Repository + "/releases/latest"), "application/vnd.github+json", token, cancellationToken);
         if (token is null && response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.NotFound)
@@ -105,9 +110,26 @@ internal sealed class GitHubUpdates
         if (version <= currentVersion)
             return new(null);
 
-        foreach (var asset in release.GetProperty("assets").EnumerateArray())
+        var assets = release.GetProperty("assets");
+        var full = FindAsset(assets, "MailManager.exe") ??
+            throw new InputException("Релиз GitHub ещё не содержит проверяемую сборку MailManager.exe.");
+        UpdateAsset? delta = null;
+        if (executable is not null)
         {
-            if (asset.GetProperty("name").GetString() != "MailManager.exe")
+            await using var source = File.OpenRead(executable);
+            var digest = await SHA256.HashDataAsync(source, cancellationToken);
+            var candidate = FindAsset(assets, BinaryDelta.AssetName(digest));
+            if (candidate is not null && candidate.Size < full.Size)
+                delta = candidate;
+        }
+        return new(new UpdateRelease(version, full, delta));
+    }
+
+    private static UpdateAsset? FindAsset(JsonElement assets, string name)
+    {
+        foreach (var asset in assets.EnumerateArray())
+        {
+            if (asset.GetProperty("name").GetString() != name)
                 continue;
 
             var hash = asset.TryGetProperty("digest", out var digest) ? digest.GetString() : null;
@@ -117,20 +139,50 @@ internal sealed class GitHubUpdates
                 hash is { Length: 71 } && hash.StartsWith("sha256:", StringComparison.Ordinal) &&
                 hash[7..].All(Uri.IsHexDigit))
             {
-                return new(new UpdateRelease(version, id, size, Convert.FromHexString(hash[7..])));
+                return new(name, id, size, Convert.FromHexString(hash[7..]));
             }
 
             break;
         }
 
-        throw new InputException("Релиз GitHub ещё не содержит проверяемую сборку MailManager.exe.");
+        return null;
     }
 
-    internal async Task DownloadAsync(UpdateRelease release, string? token, string destination, Action<int> report, CancellationToken cancellationToken)
+    internal Task DownloadAsync(UpdateRelease release, string? token, string destination, Action<int> report, CancellationToken cancellationToken) =>
+        DownloadAssetAsync(release.Version, release.Full, token, destination, report, cancellationToken);
+
+    internal async Task ApplyDeltaAsync(UpdateRelease release, string? token, string executable, UpdateStage stage, Action<int> report,
+        CancellationToken cancellationToken)
+    {
+        var delta = release.Delta ?? throw new InvalidOperationException("A matching delta is required.");
+        await DownloadAssetAsync(release.Version, delta, token, stage.Patch, report, cancellationToken);
+        var source = await File.ReadAllBytesAsync(executable, cancellationToken);
+        if (BinaryDelta.AssetName(SHA256.HashData(source)) != delta.Name)
+            throw new InputException("Исходный EXE изменился. Запустите Mail Manager заново и повторите обновление.");
+
+        var patch = await File.ReadAllBytesAsync(stage.Patch, cancellationToken);
+        byte[] result;
+        try
+        {
+            result = await Task.Run(() => BinaryDelta.Apply(source, patch, release.Full.Size), cancellationToken);
+        }
+        catch (Exception error) when (error is EndOfStreamException or InvalidDataException)
+        {
+            throw new InputException("Не удалось собрать новую версию из патча. Текущий EXE сохранён.");
+        }
+
+        if (!SHA256.HashData(result).AsSpan().SequenceEqual(release.Digest))
+            throw new InputException("Собранный EXE не совпал с релизом. Текущий файл сохранён.");
+
+        await File.WriteAllBytesAsync(stage.Payload, result, cancellationToken);
+    }
+
+    private static async Task DownloadAssetAsync(Version version, UpdateAsset asset, string? token, string destination, Action<int> report,
+        CancellationToken cancellationToken)
     {
         var url = token is null
-            ? new Uri($"{PublicRepository}/releases/download/v{release.Version}/MailManager.exe")
-            : new Uri($"{Repository}/releases/assets/{release.AssetId}");
+            ? new Uri($"{PublicRepository}/releases/download/v{version}/{asset.Name}")
+            : new Uri($"{Repository}/releases/assets/{asset.Id}");
         using var download = await GetAsync(url, "application/octet-stream", token, cancellationToken);
         if (download.StatusCode == HttpStatusCode.Found)
         {
@@ -141,11 +193,11 @@ internal sealed class GitHubUpdates
 
             // Ссылка на файл уже содержит разрешение GitHub. Токен остаётся на api.github.com.
             using var storage = await GetAsync(location, "application/octet-stream", null, cancellationToken);
-            await SaveVerifiedAsync(storage, release, destination, report, cancellationToken);
+            await SaveVerifiedAsync(storage, asset, destination, report, cancellationToken);
             return;
         }
 
-        await SaveVerifiedAsync(download, release, destination, report, cancellationToken);
+        await SaveVerifiedAsync(download, asset, destination, report, cancellationToken);
     }
 
     private static async Task<HttpResponseMessage> GetAsync(Uri uri, string accept, string? token, CancellationToken cancellationToken)
@@ -162,7 +214,7 @@ internal sealed class GitHubUpdates
         return await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
     }
 
-    private static async Task SaveVerifiedAsync(HttpResponseMessage response, UpdateRelease release, string destination, Action<int> report,
+    private static async Task SaveVerifiedAsync(HttpResponseMessage response, UpdateAsset asset, string destination, Action<int> report,
         CancellationToken cancellationToken)
     {
         response.EnsureSuccessStatusCode();
@@ -176,11 +228,11 @@ internal sealed class GitHubUpdates
         while ((count = await source.ReadAsync(buffer, cancellationToken)) > 0)
         {
             total += count;
-            if (total > release.Size)
+            if (total > asset.Size)
                 throw new InputException("Размер скачанной сборки не совпал с данными GitHub.");
             checksum.AppendData(buffer, 0, count);
             await output.WriteAsync(buffer.AsMemory(0, count), cancellationToken);
-            var percent = (int)(total * 100 / release.Size);
+            var percent = (int)(total * 100 / asset.Size);
             if (percent != previous)
             {
                 report(percent);
@@ -188,7 +240,7 @@ internal sealed class GitHubUpdates
             }
         }
 
-        if (total != release.Size || !checksum.GetHashAndReset().AsSpan().SequenceEqual(release.Digest))
+        if (total != asset.Size || !checksum.GetHashAndReset().AsSpan().SequenceEqual(asset.Digest))
             throw new InputException("Проверка скачанной сборки не прошла. Попробуйте обновиться ещё раз.");
     }
 }
