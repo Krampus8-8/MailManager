@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using MailManager.App.Services;
 using MailManager.App.ViewModels;
 using MailManager.App.Views;
 using MailManager.Data.Repositories;
@@ -11,9 +12,16 @@ public partial class App : Application
     private FileStream? _instanceLock;
     private ShellViewModel? _shell;
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.FirstOrDefault() == UpdateInstaller.ApplyArgument)
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            Shutdown(await UpdateInstaller.ApplyAsync(e.Args));
+            return;
+        }
+
         var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MailManager");
         var database = Path.Combine(folder, "mailmanager.sqlite");
 
@@ -41,7 +49,20 @@ public partial class App : Application
         _shell = new ShellViewModel(new WorkspaceStore(database, protector), protector, database);
         MainWindow = new MainWindow { DataContext = _shell };
         MainWindow.Show();
-        _ = _shell.InitializeAsync();
+        bool updated;
+        try
+        {
+            updated = UpdateInstaller.ConfirmStartup(e.Args);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            Shutdown(1);
+            return;
+        }
+
+        await _shell.InitializeAsync();
+        if (updated && _shell.IsReady)
+            _shell.Report($"Mail Manager обновлён до версии {UpdateInstaller.CurrentVersion}.");
     }
 
     protected override void OnExit(ExitEventArgs e)

@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.IO;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Windows;
 using System.Windows.Input;
 using MailManager.App.Commands;
 using MailManager.App.Services;
@@ -46,6 +48,7 @@ public sealed class ShellViewModel : ViewModel
         });
         DismissCommand = new UiCommand(_ => Message = "");
         RetryCommand = new AsyncUiCommand(InitializeAsync, () => !IsReady && !IsBusy);
+        UpdateCommand = Action(UpdateAsync);
     }
 
     public IReadOnlyList<NavigationItem> Navigation { get; }
@@ -53,6 +56,8 @@ public sealed class ShellViewModel : ViewModel
     public ICommand NavigateCommand { get; }
     public ICommand DismissCommand { get; }
     public ICommand RetryCommand { get; }
+    public ICommand UpdateCommand { get; }
+    public string VersionLabel => $"v{UpdateInstaller.CurrentVersion}";
 
     public bool IsBusy
     {
@@ -173,6 +178,66 @@ public sealed class ShellViewModel : ViewModel
 
     internal Task Run(Action action, string? success = null) =>
         RunAsync(() => { action(); return Task.CompletedTask; }, success);
+
+    private async Task UpdateAsync()
+    {
+        var restart = false;
+        await RunAsync(async () =>
+        {
+            Report("Проверяем обновления…");
+            var source = new GitHubUpdates();
+            var token = await source.GetTokenAsync(interactive: false);
+            if (string.IsNullOrEmpty(token))
+            {
+                if (!Desktop.Confirm("Для приватного релиза нужен вход в GitHub. Открыть страницу входа?", "Обновление Mail Manager"))
+                {
+                    Report("Обновление отменено.");
+                    return;
+                }
+
+                token = await source.GetTokenAsync(interactive: true);
+                if (string.IsNullOrEmpty(token))
+                    throw new InputException("Вход в GitHub не завершён. Нажмите «Обновить», чтобы повторить.");
+            }
+
+            using var limit = new CancellationTokenSource(TimeSpan.FromMinutes(8));
+            UpdateStage? stage = null;
+            try
+            {
+                var release = await source.CheckAsync(token, UpdateInstaller.CurrentVersion, limit.Token);
+                if (release is null)
+                {
+                    Report($"Установлена актуальная версия {UpdateInstaller.CurrentVersion}.");
+                    return;
+                }
+
+                var executable = Environment.ProcessPath!;
+                stage = UpdateStage.Create(executable);
+                Report($"Скачиваем Mail Manager {release.Version}…");
+                await source.DownloadAsync(release, token, stage.Payload,
+                    progress => Report($"Скачиваем Mail Manager {release.Version} · {progress} %"), limit.Token);
+                Report("Устанавливаем обновление и перезапускаем приложение…");
+                await UpdateInstaller.HandOffAsync(stage, executable, release);
+                restart = true;
+            }
+            catch (Exception error) when (error is HttpRequestException or OperationCanceledException)
+            {
+                throw new InputException("Не удалось скачать обновление. Проверьте подключение к GitHub и повторите.");
+            }
+            catch (Win32Exception)
+            {
+                throw new InputException("Windows не смогла запустить установку обновления.");
+            }
+            finally
+            {
+                if (!restart)
+                    stage?.Clean();
+            }
+        });
+
+        if (restart)
+            Application.Current.Shutdown();
+    }
 
     internal async Task ReloadAsync(bool restored = false)
     {
