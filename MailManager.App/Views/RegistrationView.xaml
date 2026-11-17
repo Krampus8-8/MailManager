@@ -20,6 +20,22 @@
                         <TextBlock Text="Почтовый сервис" Style="{StaticResource FieldTitle}"/>
                         <ComboBox ItemsSource="{Binding Providers}" SelectedValue="{Binding Provider}" IsEnabled="{Binding IsDraft}"
                                   AutomationProperties.Name="Почтовый сервис"/>
+                        <StackPanel Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}">
+                            <TextBlock Text="Имя" Style="{StaticResource FieldTitle}" Margin="0,13,0,6"/>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Копировать" Command="{Binding CopyFirstNameCommand}"
+                                        Margin="6,0,0,0" AutomationProperties.Name="Копировать имя"/>
+                                <TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsPending}"
+                                         MaxLength="100" AutomationProperties.Name="Имя"/>
+                            </DockPanel>
+                            <TextBlock Text="Фамилия" Style="{StaticResource FieldTitle}" Margin="0,11,0,6"/>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Копировать" Command="{Binding CopyLastNameCommand}"
+                                        Margin="6,0,0,0" AutomationProperties.Name="Копировать фамилию"/>
+                                <TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsPending}"
+                                         MaxLength="100" AutomationProperties.Name="Фамилия"/>
+                            </DockPanel>
+                        </StackPanel>
                         <DockPanel Margin="0,13,0,6">
                             <TextBlock DockPanel.Dock="Right" Text="{Binding DomainHint}" Foreground="{StaticResource Subtle}"/>
                             <TextBlock Text="Логин" Style="{StaticResource FieldTitle}" Margin="0"/>
@@ -30,14 +46,22 @@
                             <TextBox Text="{Binding Login, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsPending}" MaxLength="32"
                                      AutomationProperties.Name="Логин"/>
                         </DockPanel>
-                        <TextBlock Text="Пароль" Style="{StaticResource FieldTitle}" Margin="0,13,0,6"/>
+                        <TextBlock Text="{Binding PasswordLabel}" Style="{StaticResource FieldTitle}" Margin="0,13,0,6"/>
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Content="Копировать" Command="{Binding CopyPasswordCommand}" Margin="6,0,0,0"
                                     AutomationProperties.Name="Копировать пароль"/>
-                            <TextBox Text="{Binding PasswordHint, Mode=OneWay}" IsReadOnly="True" IsTabStop="False"
-                                     AutomationProperties.Name="Состояние пароля"/>
+                            <Grid>
+                                <PasswordBox x:Name="DraftPasswordBox" MaxLength="128" PasswordChanged="DraftPasswordChanged"
+                                             AutomationProperties.Name="{Binding PasswordLabel}"
+                                             Visibility="{Binding CanEnterPassword, Converter={StaticResource VisibleWhen}}"/>
+                                <TextBox Text="••••••••••••••••" IsReadOnly="True" IsTabStop="False"
+                                         Visibility="{Binding CanEnterPassword, Converter={StaticResource HiddenWhen}}"
+                                         AutomationProperties.Name="Пароль задачи сохранён"/>
+                            </Grid>
                         </DockPanel>
                         <WrapPanel Margin="0,9,0,0" Visibility="{Binding IsDraft, Converter={StaticResource VisibleWhen}}">
+                            <Button Content="Сгенерировать всё" Command="{Binding GenerateProfileCommand}" Margin="0,0,5,4"
+                                    Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
                             <Button Style="{StaticResource LinkButton}" Content="Сгенерировать логин" Command="{Binding GenerateLoginCommand}"/>
                             <Button Style="{StaticResource LinkButton}" Content="Сгенерировать пароль" Command="{Binding GeneratePasswordCommand}"/>
                         </WrapPanel>
@@ -46,9 +70,15 @@
                                     Visibility="{Binding IsDraft, Converter={StaticResource VisibleWhen}}"/>
                             <Button Content="Открыть регистрацию ↗" Command="{Binding OpenSignupCommand}" Style="{StaticResource PrimaryButton}"
                                     Margin="0,0,0,6"/>
+                            <Button Content="Копировать для браузера" Command="{Binding CopyBrowserProfileCommand}" Margin="7,0,0,6"
+                                    Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
                         </WrapPanel>
-                        <TextBlock Text="Заполните форму в браузере и пройдите проверки сервиса вручную."
-                                   Style="{StaticResource MutedText}" Margin="0,7,0,0"/>
+                        <TextBlock Text="В Chrome или Edge вставьте данные в боковую панель расширения Mail Manager. Если Google запросит номер телефона, подтвердите его на сайте."
+                                   Style="{StaticResource MutedText}" Margin="0,7,0,0"
+                                   Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
+                        <TextBlock Text="Заполните форму в браузере и пройдите проверки сервиса."
+                                   Style="{StaticResource MutedText}" Margin="0,7,0,0"
+                                   Visibility="{Binding ShowGmailProfile, Converter={StaticResource HiddenWhen}}"/>
                     </StackPanel>
                     <StackPanel Visibility="{Binding IsClosed, Converter={StaticResource VisibleWhen}}">
                         <DockPanel Margin="0,2,0,10">
@@ -72,7 +102,7 @@
                     <TextBox Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}" MaxLength="500" TextWrapping="Wrap"
                              AcceptsReturn="True" MinHeight="58" VerticalContentAlignment="Top" AutomationProperties.Name="Примечание"/>
                     <CheckBox IsChecked="{Binding KeepPassword}" Margin="0,10,0,0">
-                        <TextBlock Text="Сохранить пароль, если использован этот пароль" TextWrapping="Wrap"/>
+                        <TextBlock Text="Сохранить пароль в Mail Manager" TextWrapping="Wrap"/>
                     </CheckBox>
                     <WrapPanel Margin="0,13,0,0">
                         <Button Content="Успешно" Command="{Binding SuccessCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,7,0"/>

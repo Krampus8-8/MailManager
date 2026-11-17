@@ -48,7 +48,7 @@ public sealed partial class WorkspaceStore
             {
                 throw new InputException(InvalidBackup);
             }
-            await ValidateBackup(staging);
+            await ValidateBackup(staging, upgrade: true);
             await using (var restored = new MailDbContext(staging))
             {
                 AddHistory(restored, HistoryAction.BackupRestored);
@@ -90,32 +90,23 @@ public sealed partial class WorkspaceStore
         }
     }
 
-    private static async Task ValidateBackup(string file)
+    private static async Task ValidateBackup(string file, bool upgrade = false)
     {
         try
         {
-            using var connection = new SqliteConnection(MailDbContext.ConnectionString(file, SqliteOpenMode.ReadOnly));
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA trusted_schema=OFF";
-            command.ExecuteNonQuery();
-            command.CommandText = "PRAGMA application_id";
-            if (Convert.ToInt64(command.ExecuteScalar()) != Initial.ApplicationId)
+            await using var probe = new MailDbContext(file);
+            var migrations = probe.Database.GetMigrations().ToArray();
+            var applied = ReadBackupMigrations(file);
+            if (applied.Count == 0 || !applied.SequenceEqual(migrations.Take(applied.Count)))
                 throw new InputException(InvalidBackup);
-            command.CommandText = "PRAGMA integrity_check";
-            if (!string.Equals(command.ExecuteScalar() as string, "ok", StringComparison.Ordinal))
-                throw new InputException(InvalidBackup);
-            command.CommandText = "SELECT count(*) FROM sqlite_schema WHERE type IN ('trigger', 'view') OR sql LIKE 'CREATE VIRTUAL TABLE%'";
-            if (Convert.ToInt64(command.ExecuteScalar()) != 0)
-                throw new InputException(InvalidBackup);
-            command.CommandText = "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId";
-            using (var rows = command.ExecuteReader())
+            if (applied.Count < migrations.Length)
             {
-                if (!rows.Read() || rows.GetString(0) != Initial.Id || rows.Read())
+                if (!upgrade)
                     throw new InputException(InvalidBackup);
+                // Обновляем временный снимок. Файл пользователя остаётся доступен старой версии.
+                await probe.Database.MigrateAsync();
             }
 
-            await using var probe = new MailDbContext(file);
             var settings = await probe.Settings.AsNoTracking().SingleAsync();
             if (settings.Id != 1)
                 throw new InputException(InvalidBackup);
@@ -129,5 +120,30 @@ public sealed partial class WorkspaceStore
         {
             throw new InputException(InvalidBackup);
         }
+    }
+
+    private static IReadOnlyList<string> ReadBackupMigrations(string file)
+    {
+        using var connection = new SqliteConnection(MailDbContext.ConnectionString(file, SqliteOpenMode.ReadOnly));
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA trusted_schema=OFF";
+        command.ExecuteNonQuery();
+        command.CommandText = "PRAGMA application_id";
+        if (Convert.ToInt64(command.ExecuteScalar()) != Initial.ApplicationId)
+            throw new InputException(InvalidBackup);
+        command.CommandText = "PRAGMA integrity_check";
+        if (!string.Equals(command.ExecuteScalar() as string, "ok", StringComparison.Ordinal))
+            throw new InputException(InvalidBackup);
+        command.CommandText = "SELECT count(*) FROM sqlite_schema WHERE type IN ('trigger', 'view') OR sql LIKE 'CREATE VIRTUAL TABLE%'";
+        if (Convert.ToInt64(command.ExecuteScalar()) != 0)
+            throw new InputException(InvalidBackup);
+
+        command.CommandText = "SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId";
+        using var rows = command.ExecuteReader();
+        List<string> applied = [];
+        while (rows.Read())
+            applied.Add(rows.GetString(0));
+        return applied;
     }
 }

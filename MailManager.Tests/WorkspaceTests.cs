@@ -174,6 +174,57 @@ public sealed class WorkspaceTests
     }
 
     [TestMethod]
+    public async Task GmailDraftPersistsNamesAndCanKeepPasswordChangedDuringSignup()
+    {
+        var id = await _store.AddTaskAsync(new(MailProvider.Gmail, "profile123", Secret, " Анна ", "Морозова"), RegistrationMode.Single);
+        var pending = (await _store.ReadAsync()).Tasks.Single();
+        Assert.AreEqual("Анна", pending.FirstName);
+        Assert.AreEqual("Морозова", pending.LastName);
+
+        const string email = "profile123@gmail.com";
+        await Assert.ThrowsExactlyAsync<InputException>(() => _store.FinishAsync(id,
+            new(RegistrationStatus.Succeeded, email, "", PhoneCheck.Unknown, true, "short")));
+        Assert.AreEqual(RegistrationStatus.Pending, (await _store.ReadAsync()).Tasks.Single().Status);
+
+        const string replacement = "New1!Pwd";
+        await _store.FinishAsync(id, new(RegistrationStatus.Succeeded, email, "", PhoneCheck.Verified, true, replacement));
+        var result = await _store.ReadAsync();
+        Assert.AreEqual(replacement, _protector.Unprotect(result.Accounts.Single().ProtectedPassword!));
+        Assert.IsNull(result.Tasks.Single().ProtectedPassword);
+    }
+
+    [TestMethod]
+    public async Task RestoreMigratesVersionOneSnapshotWithoutChangingOriginalFile()
+    {
+        var backup = Path.Combine(_folder, "v1.sqlite");
+        await _store.AddTaskAsync(new(MailProvider.Gmail, "legacy123", Secret), RegistrationMode.Single);
+        await _store.CreateBackupAsync(backup);
+        using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = backup,
+            Pooling = false
+        }.ToString()))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                ALTER TABLE Tasks DROP COLUMN FirstName;
+                ALTER TABLE Tasks DROP COLUMN LastName;
+                DELETE FROM __EFMigrationsHistory WHERE MigrationId LIKE '%_RegistrationNames';
+                """;
+            command.ExecuteNonQuery();
+        }
+        var original = SHA256.HashData(await File.ReadAllBytesAsync(backup));
+
+        await _store.RestoreBackupAsync(backup);
+        var task = (await _store.ReadAsync()).Tasks.Single();
+        Assert.AreEqual("legacy123", task.Login);
+        Assert.IsNull(task.FirstName);
+        Assert.AreEqual(Secret, _protector.Unprotect(task.ProtectedPassword!));
+        CollectionAssert.AreEqual(original, SHA256.HashData(await File.ReadAllBytesAsync(backup)));
+    }
+
+    [TestMethod]
     public async Task ConcurrentDuplicateTaskHasOneWinner()
     {
         var first = Add();

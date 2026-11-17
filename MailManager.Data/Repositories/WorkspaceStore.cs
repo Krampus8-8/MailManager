@@ -35,10 +35,11 @@ public sealed partial class WorkspaceStore(string path, ISecretProtector protect
         var used = await UsedLogins(db);
         if (used.Contains(Key(draft.Provider, login)))
             throw new InputException("Этот логин уже есть среди аккаунтов или активных задач.");
-        if (draft.Password.Length is < 12 or > 128)
-            throw new InputException("Сгенерируйте пароль длиной от 12 до 128 символов.");
+        RegistrationRules.ValidatePassword(draft.Password, draft.Provider);
 
         var record = NewTask(draft.Provider, login, draft.Password, mode);
+        record.FirstName = RegistrationRules.ProfileName(draft.FirstName, "Имя");
+        record.LastName = RegistrationRules.ProfileName(draft.LastName, "Фамилия");
         db.Tasks.Add(record);
         AddHistory(db, HistoryAction.TaskAdded, login + " · " + RegistrationRules.Provider(draft.Provider).Name);
         await db.SaveChangesAsync();
@@ -90,6 +91,12 @@ public sealed partial class WorkspaceStore(string path, ISecretProtector protect
         {
             var email = RegistrationRules.Email(outcome.Email, record.Provider);
             await RequireUniqueEmail(db, null, email, record.Provider);
+            var password = outcome.KeepPassword ? record.ProtectedPassword : null;
+            if (outcome.KeepPassword && outcome.ReplacementPassword is { Length: > 0 } replacement)
+            {
+                RegistrationRules.ValidatePassword(replacement, record.Provider);
+                password = protector.Protect(replacement);
+            }
             db.Accounts.Add(new EmailAccount
             {
                 Email = email,
@@ -98,7 +105,7 @@ public sealed partial class WorkspaceStore(string path, ISecretProtector protect
                 Status = outcome.Status,
                 PhoneCheck = outcome.PhoneCheck,
                 Note = note,
-                ProtectedPassword = outcome.KeepPassword ? record.ProtectedPassword : null
+                ProtectedPassword = password
             });
             subject = email;
         }

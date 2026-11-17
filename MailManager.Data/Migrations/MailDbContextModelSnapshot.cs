@@ -31,6 +31,8 @@ internal sealed class MailDbContextModelSnapshot : ModelSnapshot
             entity.Property<int>("Provider").HasColumnType("INTEGER");
             entity.Property<int>("Mode").HasColumnType("INTEGER");
             entity.Property<string>("Login").IsRequired().HasColumnType("TEXT");
+            entity.Property<string>("FirstName").HasColumnType("TEXT");
+            entity.Property<string>("LastName").HasColumnType("TEXT");
             entity.Property<int>("Status").HasColumnType("INTEGER");
             entity.Property<int>("PhoneCheck").HasColumnType("INTEGER");
             entity.Property<DateTime>("CreatedUtc").HasColumnType("TEXT");

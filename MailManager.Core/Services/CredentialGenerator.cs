@@ -10,6 +10,16 @@ public sealed class CredentialGenerator
         ["alex", "anika", "aria", "daria", "elena", "emil", "irina", "kirill", "lev", "lina", "maksim", "maria",
          "mila", "miran", "nina", "roman", "sasha", "savel", "sonya", "timur", "vera", "viktor", "yana"];
 
+    private static readonly string[] Surnames =
+        ["Belov", "Karelin", "Kovalenko", "Lebedev", "Moroz", "Orlov", "Romanenko", "Smirnov", "Sokolov", "Volkov"];
+
+    public RegistrationName Name()
+    {
+        var first = Names[RandomNumberGenerator.GetInt32(Names.Length)];
+        var last = Surnames[RandomNumberGenerator.GetInt32(Surnames.Length)];
+        return new(char.ToUpperInvariant(first[0]) + first[1..], last);
+    }
+
     public string Password(PasswordOptions options)
     {
         if (options.Length is < 12 or > 128)

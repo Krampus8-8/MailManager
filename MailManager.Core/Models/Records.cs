@@ -25,6 +25,8 @@ public sealed class RegistrationTask
     public MailProvider Provider { get; set; }
     public RegistrationMode Mode { get; set; }
     public string Login { get; set; } = "";
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
     public RegistrationStatus Status { get; set; }
     public PhoneCheck PhoneCheck { get; set; }
     public DateTime CreatedUtc { get; set; }
@@ -50,8 +52,10 @@ public sealed class AppSettings
 }
 
 public sealed record ProviderInfo(MailProvider Id, string Name, string Domain, Uri Signup, string[] Domains);
-public sealed record RegistrationDraft(MailProvider Provider, string Login, string Password);
-public sealed record RegistrationOutcome(RegistrationStatus Status, string Email, string Note, PhoneCheck PhoneCheck, bool KeepPassword);
+public sealed record RegistrationDraft(MailProvider Provider, string Login, string Password, string? FirstName = null, string? LastName = null);
+public sealed record RegistrationOutcome(RegistrationStatus Status, string Email, string Note, PhoneCheck PhoneCheck, bool KeepPassword,
+    string? ReplacementPassword = null);
+public sealed record RegistrationName(string FirstName, string LastName);
 public sealed record AccountEdit(string Email, MailProvider Provider, RegistrationStatus Status, PhoneCheck PhoneCheck, string Note);
 public sealed record ImportRow(MailProvider Provider, string Login);
 public sealed record PasswordOptions(int Length, bool Upper = true, bool Lower = true, bool Digits = true, bool Symbols = true);

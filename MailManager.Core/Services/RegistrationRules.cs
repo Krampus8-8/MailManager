@@ -70,6 +70,28 @@ public static partial class RegistrationRules
         return note;
     }
 
+    public static string? ProfileName(string? value, string field)
+    {
+        var name = value?.Trim();
+        if (string.IsNullOrEmpty(name))
+            return null;
+        if (name.Length > 100 || name.Any(char.IsControl))
+            throw new InputException($"Укажите до 100 символов без переносов строки в поле «{field}».");
+        return name;
+    }
+
+    public static void ValidatePassword(string password, MailProvider provider)
+    {
+        var minimum = provider == MailProvider.Gmail ? 8 : 12;
+        if (password.Length < minimum || password.Length > 128)
+            throw new InputException($"Введите или сгенерируйте пароль длиной от {minimum} до 128 символов.");
+        if (provider == MailProvider.Gmail && (password[0] == ' ' || password[^1] == ' ' ||
+            password.Any(character => character is < ' ' or > '~')))
+        {
+            throw new InputException("Для Gmail используйте латинские буквы, цифры и символы ASCII. Уберите пробелы в начале и конце пароля.");
+        }
+    }
+
     public static void ValidateStatus(RegistrationStatus status, PhoneCheck phone)
     {
         if (!Enum.IsDefined(status) || !Enum.IsDefined(phone))

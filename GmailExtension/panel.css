@@ -1,0 +1,50 @@
+body {
+    max-width: 34rem;
+    margin: 1.25rem;
+    color: #f5f3fc;
+    background: #12121a;
+    font: 15px/1.5 system-ui, sans-serif;
+    color-scheme: dark;
+}
+h1 {
+    margin: 0 0 1rem;
+    font-size: 1.45rem;
+}
+p {
+    color: #d6d2e6;
+    margin: 0.75rem 0;
+}
+label {
+    display: block;
+    margin-top: 1.25rem;
+}
+input, button {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    margin: 0.5rem 0;
+    padding: 0.65rem 0.75rem;
+    font: inherit;
+    border: 1px solid #514465;
+    border-radius: 0.5rem;
+    color: inherit;
+    background: #1d1c29;
+}
+button {
+    cursor: pointer;
+}
+button#fill {
+    background: #7545d6;
+}
+button:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+:focus-visible {
+    outline: 2px solid #c39fff;
+    outline-offset: 2px;
+}
+#status {
+    min-height: 3.25rem;
+    color: #d3b7ff;
+}
