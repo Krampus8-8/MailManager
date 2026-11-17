@@ -186,25 +186,32 @@ public sealed class ShellViewModel : ViewModel
         {
             Report("Проверяем обновления…");
             var source = new GitHubUpdates();
-            var token = await source.GetTokenAsync(interactive: false);
-            if (string.IsNullOrEmpty(token))
-            {
-                if (!Desktop.Confirm("Для приватного релиза нужен вход в GitHub. Открыть страницу входа?", "Обновление Mail Manager"))
-                {
-                    Report("Обновление отменено.");
-                    return;
-                }
-
-                token = await source.GetTokenAsync(interactive: true);
-                if (string.IsNullOrEmpty(token))
-                    throw new InputException("Вход в GitHub не завершён. Нажмите «Обновить», чтобы повторить.");
-            }
-
             using var limit = new CancellationTokenSource(TimeSpan.FromMinutes(8));
             UpdateStage? stage = null;
             try
             {
-                var release = await source.CheckAsync(token, UpdateInstaller.CurrentVersion, limit.Token);
+                string? token = null;
+                var check = await source.CheckAsync(token, UpdateInstaller.CurrentVersion, limit.Token);
+                if (check.RequiresSignIn)
+                {
+                    token = await source.GetTokenAsync(interactive: false);
+                    if (string.IsNullOrEmpty(token))
+                    {
+                        if (!Desktop.Confirm("Для приватного релиза нужен вход в GitHub. Открыть страницу входа?", "Обновление Mail Manager"))
+                        {
+                            Report("Обновление отменено.");
+                            return;
+                        }
+
+                        token = await source.GetTokenAsync(interactive: true);
+                        if (string.IsNullOrEmpty(token))
+                            throw new InputException("Вход в GitHub не завершён. Нажмите «Обновить», чтобы повторить.");
+                    }
+
+                    check = await source.CheckAsync(token, UpdateInstaller.CurrentVersion, limit.Token);
+                }
+
+                var release = check.Release;
                 if (release is null)
                 {
                     Report($"Установлена актуальная версия {UpdateInstaller.CurrentVersion}.");

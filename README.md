@@ -6,7 +6,7 @@ Mail Manager — локальное Windows-приложение для учёт
 
 Скачайте [MailManager.exe для Windows x64](https://github.com/Krampus8-8/MailManager/releases/latest/download/MailManager.exe) и запустите его. Среда .NET Desktop Runtime входит в сборку. При первом запуске приложение создаст базу `%LOCALAPPDATA%\MailManager\mailmanager.sqlite`.
 
-Нажмите **Обновить** в правом верхнем углу окна, чтобы проверить новую версию. Mail Manager скачает сборку, проверит её SHA-256 и перезапустится. Для доступа к приватному релизу используется Git Credential Manager из Git for Windows. При первом обновлении он может предложить войти в GitHub под аккаунтом с доступом к репозиторию.
+Нажмите **Обновить** в правом верхнем углу окна, чтобы проверить новую версию. Mail Manager скачает публичный релиз, проверит SHA-256 сборки и перезапустится. Если релиз доступен только участникам репозитория, приложение использует Git Credential Manager из Git for Windows.
 
 Для сборки установите [SDK .NET 10](https://dotnet.microsoft.com/download/dotnet/10.0). Для среды разработки подойдёт Visual Studio 2026 с компонентом SDK .NET 10 и рабочей нагрузкой «Разработка классических приложений .NET». Проверьте редакцию и сборку Windows 10 или Windows 11 по [матрице поддержки Microsoft](https://learn.microsoft.com/dotnet/core/install/windows#supported-versions).
 

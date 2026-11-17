@@ -11,11 +11,14 @@ using MailManager.Core.Services;
 namespace MailManager.App.Services;
 
 internal sealed record UpdateRelease(Version Version, long AssetId, long Size, byte[] Digest);
+internal sealed record UpdateCheck(UpdateRelease? Release, bool RequiresSignIn = false);
 
 internal sealed class GitHubUpdates
 {
-    private const string Repository = "https://api.github.com/repos/Krampus8-8/MailManager";
     private const string Account = "Krampus8-8";
+    private const string Project = Account + "/MailManager";
+    private const string Repository = "https://api.github.com/repos/" + Project;
+    private const string PublicRepository = "https://github.com/" + Project;
     private const long MaximumDownload = 200 * 1024 * 1024;
     private static readonly HttpClient Client = new(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
 
@@ -83,21 +86,24 @@ internal sealed class GitHubUpdates
         }
     }
 
-    internal async Task<UpdateRelease?> CheckAsync(string token, Version currentVersion, CancellationToken cancellationToken)
+    internal async Task<UpdateCheck> CheckAsync(string? token, Version currentVersion, CancellationToken cancellationToken)
     {
         using var response = await GetAsync(new Uri(Repository + "/releases/latest"), "application/vnd.github+json", token, cancellationToken);
-        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
-            throw new InputException($"GitHub не открыл приватный релиз. Проверьте, что вход Git for Windows выполнен под аккаунтом с доступом к {Account}/MailManager.");
+        if (token is null && response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.NotFound)
+            return new(null, RequiresSignIn: true);
+        if (token is not null && response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+            throw new InputException($"GitHub не открыл приватный релиз. Проверьте, что вход Git for Windows выполнен под аккаунтом с доступом к {Project}.");
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         var release = document.RootElement;
         var tag = release.GetProperty("tag_name").GetString();
-        if (tag is null || !tag.StartsWith('v') || !Version.TryParse(tag[1..], out var version) || version.Build < 0 || version.Revision != -1)
+        if (tag is null || !tag.StartsWith('v') || !Version.TryParse(tag[1..], out var version) ||
+            version.Build < 0 || version.Revision != -1 || tag != $"v{version}")
             throw new InputException("GitHub вернул релиз с непонятным номером версии.");
         if (version <= currentVersion)
-            return null;
+            return new(null);
 
         foreach (var asset in release.GetProperty("assets").EnumerateArray())
         {
@@ -111,7 +117,7 @@ internal sealed class GitHubUpdates
                 hash is { Length: 71 } && hash.StartsWith("sha256:", StringComparison.Ordinal) &&
                 hash[7..].All(Uri.IsHexDigit))
             {
-                return new(version, id, size, Convert.FromHexString(hash[7..]));
+                return new(new UpdateRelease(version, id, size, Convert.FromHexString(hash[7..])));
             }
 
             break;
@@ -120,12 +126,15 @@ internal sealed class GitHubUpdates
         throw new InputException("Релиз GitHub ещё не содержит проверяемую сборку MailManager.exe.");
     }
 
-    internal async Task DownloadAsync(UpdateRelease release, string token, string destination, Action<int> report, CancellationToken cancellationToken)
+    internal async Task DownloadAsync(UpdateRelease release, string? token, string destination, Action<int> report, CancellationToken cancellationToken)
     {
-        using var api = await GetAsync(new Uri($"{Repository}/releases/assets/{release.AssetId}"), "application/octet-stream", token, cancellationToken);
-        if (api.StatusCode == HttpStatusCode.Found)
+        var url = token is null
+            ? new Uri($"{PublicRepository}/releases/download/v{release.Version}/MailManager.exe")
+            : new Uri($"{Repository}/releases/assets/{release.AssetId}");
+        using var download = await GetAsync(url, "application/octet-stream", token, cancellationToken);
+        if (download.StatusCode == HttpStatusCode.Found)
         {
-            var location = api.Headers.Location;
+            var location = download.Headers.Location;
             if (location is not { IsAbsoluteUri: true, Scheme: "https", IsDefaultPort: true } || location.UserInfo.Length != 0 ||
                 location.Host is not ("release-assets.githubusercontent.com" or "objects.githubusercontent.com" or "github-releases.githubusercontent.com"))
                 throw new InputException("GitHub перенаправил скачивание на неизвестный сервер.");
@@ -136,7 +145,7 @@ internal sealed class GitHubUpdates
             return;
         }
 
-        await SaveVerifiedAsync(api, release, destination, report, cancellationToken);
+        await SaveVerifiedAsync(download, release, destination, report, cancellationToken);
     }
 
     private static async Task<HttpResponseMessage> GetAsync(Uri uri, string accept, string? token, CancellationToken cancellationToken)
