@@ -4,6 +4,7 @@ const input = document.querySelector("#profile");
 const status = document.querySelector("#status");
 const fill = document.querySelector("#fill");
 const clear = document.querySelector("#clear");
+document.querySelector("#version").textContent = `Расширение ${chrome.runtime.getManifest().version}`;
 const retention = 5 * 60 * 1000;
 let pending;
 let expiration;
@@ -32,10 +33,21 @@ input.addEventListener("input", () => {
 input.addEventListener("paste", async event => {
     event.preventDefault();
     const text = event.clipboardData?.getData("text/plain") ?? "";
+    if (!text.trim()) {
+        reset("Буфер обмена пуст. Скопируйте данные в Mail Manager и сразу вставьте их сюда.");
+        return;
+    }
+    let profile;
+    try {
+        profile = readProfile(text);
+    } catch {
+        reset("Формат не распознан. Нажмите «Копировать для браузера» в Mail Manager и вставьте данные ещё раз.");
+        return;
+    }
+
     reset("Проверяем вкладку регистрации…");
     const request = revision;
     try {
-        const profile = readProfile(text);
         const tab = await activeTab();
         if (request !== revision) {
             return;
@@ -52,7 +64,7 @@ input.addEventListener("paste", async event => {
         clear.disabled = false;
     } catch {
         if (request === revision) {
-            status.textContent = "Скопируйте данные кнопкой «Копировать для браузера» в Mail Manager.";
+            status.textContent = "Не удалось проверить вкладку. Откройте боковую панель через значок расширения на странице Gmail.";
         }
     }
 });

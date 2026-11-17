@@ -63,7 +63,8 @@ public sealed class RegistrationViewModel : PageViewModel
         CopyPasswordCommand = shell.Action(() => shell.Run(() => shell.CopySecret(GetPassword())));
         ShowPasswordCommand = shell.Action(() => shell.Run(() => shell.Desktop.ShowPassword(GetPassword())),
             () => CanRegister && (DraftPassword.Length > 0 || SelectedTask?.Record.ProtectedPassword is not null));
-        CopyBrowserProfileCommand = shell.Action(() => shell.Run(CopyBrowserProfile), () => CanRegister);
+        CopyBrowserProfileCommand = shell.Action(() => shell.Run(() => CopyBrowserProfile()), () => CanRegister);
+        CopyLegacyBrowserProfileCommand = shell.Action(() => shell.Run(() => CopyBrowserProfile(legacy: true)), () => CanRegister);
         CopyExtensionGuideCommand = shell.Action(() => shell.Run(
             () => shell.Desktop.Copy(ExtensionGuideTitle + Environment.NewLine + ExtensionGuide),
             "Инструкция скопирована."), () => CanRegister);
@@ -174,6 +175,7 @@ public sealed class RegistrationViewModel : PageViewModel
     public ICommand CopyPasswordCommand { get; }
     public ICommand ShowPasswordCommand { get; }
     public ICommand CopyBrowserProfileCommand { get; }
+    public ICommand CopyLegacyBrowserProfileCommand { get; }
     public ICommand CopyExtensionGuideCommand { get; }
     public ICommand SaveGmailExtensionCommand { get; }
 
@@ -185,7 +187,7 @@ public sealed class RegistrationViewModel : PageViewModel
         3. Включите «Режим разработчика» и нажмите «Загрузить распакованное расширение».
         4. Выберите папку GmailExtension, внутри которой лежит manifest.json, и нажмите «Выбор папки».
 
-        Если расширение уже установлено, замените файлы в его папке и нажмите «Обновить» на карточке расширения.
+        Чтобы обновить расширение, замените файлы в установленной папке GmailExtension и нажмите значок перезагрузки на карточке в Chrome или Edge.
         Вставьте данные в боковую панель и нажимайте «Заполнить текущий шаг». Код из SMS введите на сайте Google.
         """;
     public ICommand SaveTaskCommand { get; }
@@ -282,10 +284,24 @@ public sealed class RegistrationViewModel : PageViewModel
         throw new InputException("Введите или сгенерируйте пароль.");
     }
 
-    private void CopyBrowserProfile()
+    private void CopyBrowserProfile(bool legacy = false)
     {
         var password = GetPassword();
         RegistrationRules.ValidatePassword(password, MailProvider.Gmail);
+        var credentials = new
+        {
+            firstName = RegistrationRules.ProfileName(FirstName, "Имя") ?? "",
+            lastName = RegistrationRules.ProfileName(LastName, "Фамилия") ?? "",
+            login = RegistrationRules.Login(Login, MailProvider.Gmail),
+            password
+        };
+        if (legacy)
+        {
+            _shell.Desktop.CopySecret("MailManager-Gmail/1:" + JsonSerializer.Serialize(credentials), _shell.Data.Settings.ClipboardSeconds);
+            _shell.Report("Имя, фамилия, логин и пароль скопированы для расширения 1.1. Вставьте их в боковую панель.");
+            return;
+        }
+
         DateOnly? birthday = null;
         if (!string.IsNullOrWhiteSpace(BirthDate))
         {
@@ -301,10 +317,10 @@ public sealed class RegistrationViewModel : PageViewModel
 
         var profile = JsonSerializer.Serialize(new
         {
-            firstName = RegistrationRules.ProfileName(FirstName, "Имя") ?? "",
-            lastName = RegistrationRules.ProfileName(LastName, "Фамилия") ?? "",
-            login = RegistrationRules.Login(Login, MailProvider.Gmail),
-            password,
+            credentials.firstName,
+            credentials.lastName,
+            credentials.login,
+            credentials.password,
             birthDate = birthday?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             gender = Gender,
             phoneNumber

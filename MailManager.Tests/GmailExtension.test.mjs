@@ -78,6 +78,39 @@ test("clipboard payload round trips Unicode names and rejects unrelated text", (
     assert.throws(() => readProfile(encode({ gender: "other" })));
 });
 
+test("the panel accepts both clipboard formats and explains an empty clipboard", async () => {
+    const elements = new Map(["#profile", "#status", "#fill", "#clear", "#version"].map(id => [id, {
+        listeners: {},
+        addEventListener(name, listener) { this.listeners[name] = listener; }
+    }]));
+    globalThis.document = { querySelector: selector => elements.get(selector) };
+    globalThis.chrome = {
+        runtime: { getManifest: () => ({ version: "1.2.1" }) },
+        tabs: { query: async () => [{ id: 1, url: firstStep }], onRemoved: { addListener() {} } }
+    };
+    const paste = text => elements.get("#profile").listeners.paste({
+        preventDefault() {},
+        clipboardData: { getData: () => text }
+    });
+
+    try {
+        await import("../GmailExtension/panel.js");
+        assert.equal(elements.get("#version").textContent, "Расширение 1.2.1");
+        await paste("");
+        assert.match(elements.get("#status").textContent, /Буфер обмена пуст/u);
+        await paste(JSON.stringify(profile));
+        assert.match(elements.get("#status").textContent, /Формат не распознан/u);
+        await paste("MailManager-Gmail/1:" + JSON.stringify(profile));
+        assert.equal(elements.get("#fill").disabled, false);
+        await paste("MailManager-Gmail/2:" + JSON.stringify({ ...profile, ...details }));
+        assert.equal(elements.get("#fill").disabled, false);
+    } finally {
+        elements.get("#clear").listeners.click?.();
+        delete globalThis.document;
+        delete globalThis.chrome;
+    }
+});
+
 test("filling fills the phone but preserves manual input and skips an SMS code", async () => {
     class Input {
         #value;
