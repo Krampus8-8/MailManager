@@ -13,22 +13,19 @@ public sealed class DashboardViewModel : PageViewModel
     private IReadOnlyList<AccountRow> _recent = [];
 
     internal DashboardViewModel(ShellViewModel shell)
-        : base("Главная", "Управление почтовыми аккаунтами Gmail, Mail.ru и Яндекс")
+        : base("Главная", "Управление почтовыми аккаунтами Gmail")
     {
         OpenSingle = shell.GoTo(Section.Single);
         OpenQueue = shell.GoTo(Section.Queue);
         OpenAccounts = shell.GoTo(Section.Accounts);
         OpenPasswords = new UiCommand(_ => shell.GoToGenerators(true));
         OpenLogins = new UiCommand(_ => shell.GoToGenerators(false));
-        Providers = RegistrationRules.Providers.Select(p => new ProviderTile(
-            p.Name, p.Signup.Host, p.Id, shell.Action(() => shell.Run(() => shell.Desktop.Open(p.Signup))))).ToArray();
         Update(shell.Data);
     }
 
     public IReadOnlyList<StatTile> Statistics { get => _statistics; private set => Set(ref _statistics, value); }
     public IReadOnlyList<AccountRow> Recent { get => _recent; private set => Set(ref _recent, value); }
     public bool IsEmpty => Recent.Count == 0;
-    public IReadOnlyList<ProviderTile> Providers { get; }
     public ICommand OpenSingle { get; }
     public ICommand OpenQueue { get; }
     public ICommand OpenAccounts { get; }
@@ -37,20 +34,21 @@ public sealed class DashboardViewModel : PageViewModel
 
     internal override void Update(WorkspaceData data)
     {
+        var accounts = data.Accounts.Where(x => x.Provider == MailProvider.Gmail).ToArray();
+        var tasks = data.Tasks.Where(x => x.Provider == MailProvider.Gmail).ToArray();
         Statistics =
         [
-            new("Всего аккаунтов", data.Accounts.Count, "\uE715", "#A37BFF", "#34274F"),
-            new("Успешных", data.Tasks.Count(x => x.Status == RegistrationStatus.Succeeded), "\uE73E", "#4DE69B", "#203D37"),
-            new("В процессе", data.Tasks.Count(x => x.Status == RegistrationStatus.Pending), "\uE823", "#FFBC57", "#42372F"),
-            new("С ошибкой", data.Tasks.Count(x => x.Status == RegistrationStatus.Failed), "\uE711", "#FF6A72", "#442A38")
+            new("Всего аккаунтов", accounts.Length, "\uE715", "#A37BFF", "#34274F"),
+            new("Успешных", tasks.Count(x => x.Status == RegistrationStatus.Succeeded), "\uE73E", "#4DE69B", "#203D37"),
+            new("В процессе", tasks.Count(x => x.Status == RegistrationStatus.Pending), "\uE823", "#FFBC57", "#42372F"),
+            new("С ошибкой", tasks.Count(x => x.Status == RegistrationStatus.Failed), "\uE711", "#FF6A72", "#442A38")
         ];
-        Recent = data.Accounts.Take(5).Select(x => new AccountRow(x)).ToArray();
+        Recent = accounts.Take(5).Select(x => new AccountRow(x)).ToArray();
         Notify(nameof(IsEmpty));
     }
 }
 
 public sealed record StatTile(string Label, int Count, string Icon, string Color, string Tint);
-public sealed record ProviderTile(string Name, string Host, MailProvider Provider, ICommand Open);
 
 public sealed class HistoryViewModel() : PageViewModel("История", "Журнал локальных операций")
 {
@@ -83,7 +81,7 @@ public sealed class GeneratorsViewModel : PageViewModel
         ShowLoginCommand = new UiCommand(_ => ShowPasswords = false);
         ShowPasswordCommand = new UiCommand(_ => ShowPasswords = true);
         LoginCommand = shell.Action(() => shell.Run(() =>
-            Login = shell.GenerateLogin(Provider, ReadNumber(LoginLength, "Длина логина"), Pattern, Login)));
+            Login = shell.GenerateLogin(MailProvider.Gmail, ReadNumber(LoginLength, "Длина логина"), Pattern, Login)));
         PasswordCommand = shell.Action(() => shell.Run(() =>
         {
             _password = shell.Generator.Password(new(ReadNumber(PasswordLength, "Длина пароля"), Upper, Lower, Digits, Symbols));
@@ -94,7 +92,6 @@ public sealed class GeneratorsViewModel : PageViewModel
     }
 
     public bool ShowPasswords { get => _showPasswords; set => Set(ref _showPasswords, value); }
-    public MailProvider Provider { get; set; }
     public LoginPattern Pattern { get; set; }
     public bool Upper { get; set; } = true;
     public bool Lower { get; set; } = true;
@@ -104,7 +101,6 @@ public sealed class GeneratorsViewModel : PageViewModel
     public string PasswordLength { get => _passwordLength; set => Set(ref _passwordLength, value); }
     public string Login { get => _login; private set => Set(ref _login, value); }
     public string PasswordHint => _password.Length == 0 ? "Пароль не сгенерирован" : "••••••••••••••••";
-    public IReadOnlyList<Choice<MailProvider>> Providers => Labels.Providers;
     public IReadOnlyList<Choice<LoginPattern>> Patterns { get; } =
         [new(LoginPattern.Name, "Имя и цифры"), new(LoginPattern.Numeric, "Числовая комбинация")];
     public ICommand LoginCommand { get; }

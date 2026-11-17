@@ -31,8 +31,6 @@
                 Visibility="{Binding ShowPasswords, Converter={StaticResource HiddenWhen}}">
             <StackPanel>
                 <TextBlock Text="Генератор логинов" Style="{StaticResource SectionTitle}" Margin="0,0,0,14"/>
-                <TextBlock Text="Почтовый сервис" Style="{StaticResource FieldTitle}"/>
-                <ComboBox ItemsSource="{Binding Providers}" SelectedValue="{Binding Provider}" AutomationProperties.Name="Почтовый сервис"/>
                 <TextBlock Text="Вариант логина" Style="{StaticResource FieldTitle}" Margin="0,12,0,6"/>
                 <ComboBox ItemsSource="{Binding Patterns}" SelectedValue="{Binding Pattern}" AutomationProperties.Name="Вариант логина"/>
                 <TextBlock Text="Длина (6–30)" Style="{StaticResource FieldTitle}" Margin="0,12,0,6"/>

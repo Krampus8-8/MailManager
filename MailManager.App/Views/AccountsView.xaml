@@ -51,7 +51,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="1">
                         <TextBlock Text="Почтовый сервис" Style="{StaticResource FieldTitle}"/>
-                        <ComboBox ItemsSource="{Binding Providers}" SelectedValue="{Binding Provider}" AutomationProperties.Name="Почтовый сервис"/>
+                        <TextBlock Text="{Binding ProviderName}" Style="{StaticResource MutedText}"/>
                         <TextBlock Text="Проверка телефона" Style="{StaticResource FieldTitle}" Margin="0,12,0,6"/>
                         <ComboBox ItemsSource="{Binding PhoneChecks}" SelectedValue="{Binding Phone}" AutomationProperties.Name="Проверка телефона"/>
                     </StackPanel>

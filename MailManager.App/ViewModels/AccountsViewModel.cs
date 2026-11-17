@@ -14,7 +14,6 @@ public sealed class AccountsViewModel : PageViewModel
     private int _statusFilter = -1;
     private string _email = "";
     private string _note = "";
-    private MailProvider _provider;
     private RegistrationStatus _status = RegistrationStatus.Succeeded;
     private PhoneCheck _phone;
 
@@ -57,7 +56,7 @@ public sealed class AccountsViewModel : PageViewModel
 
             Email = value?.Email ?? "";
             Note = value?.Note ?? "";
-            Provider = value?.Record.Provider ?? MailProvider.Gmail;
+            Notify(nameof(ProviderName));
             Status = value?.Status ?? RegistrationStatus.Succeeded;
             Phone = value?.Record.PhoneCheck ?? PhoneCheck.Unknown;
             Notify(nameof(EditTitle));
@@ -68,11 +67,11 @@ public sealed class AccountsViewModel : PageViewModel
     public string EditTitle => Selected is null ? "Новый аккаунт" : "Редактирование аккаунта";
     public string Email { get => _email; set => Set(ref _email, value); }
     public string Note { get => _note; set => Set(ref _note, value); }
-    public MailProvider Provider { get => _provider; set => Set(ref _provider, value); }
+    private MailProvider Provider => Selected?.Record.Provider ?? MailProvider.Gmail;
+    public string ProviderName => Labels.Provider(Provider);
     public RegistrationStatus Status { get => _status; set => Set(ref _status, value); }
     public PhoneCheck Phone { get => _phone; set => Set(ref _phone, value); }
 
-    public IReadOnlyList<Choice<MailProvider>> Providers => Labels.Providers;
     public IReadOnlyList<Choice<RegistrationStatus>> Statuses => Labels.Statuses;
     public IReadOnlyList<Choice<PhoneCheck>> PhoneChecks => Labels.PhoneChecks;
 
@@ -114,7 +113,6 @@ public sealed class AccountsViewModel : PageViewModel
         Selected = null;
         Email = "";
         Note = "";
-        Provider = MailProvider.Gmail;
         Status = RegistrationStatus.Succeeded;
         Phone = PhoneCheck.Unknown;
     }

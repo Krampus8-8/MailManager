@@ -1,6 +1,8 @@
 using System.IO;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
 using MailManager.App.Commands;
 using MailManager.App.Services;
@@ -15,10 +17,12 @@ public sealed class RegistrationViewModel : PageViewModel
     private readonly RegistrationMode _mode;
     private IReadOnlyList<TaskRow> _rows = [];
     private TaskRow? _selectedTask;
-    private MailProvider _provider;
     private string _login = "";
     private string _firstName = "";
     private string _lastName = "";
+    private string _birthDate = "";
+    private string _gender = "";
+    private string _phoneNumber = "";
     private string _password = "";
     private string _email = "";
     private string _note = "";
@@ -48,16 +52,16 @@ public sealed class RegistrationViewModel : PageViewModel
             LastName = name.LastName;
             Login = login;
             DraftPassword = password;
-        }), () => ShowGmailProfile && IsDraft);
+        }), () => IsDraft);
         CopyFirstNameCommand = shell.Action(() => CopyName(FirstName, "Имя"), () => !string.IsNullOrWhiteSpace(FirstName));
         CopyLastNameCommand = shell.Action(() => CopyName(LastName, "Фамилия"), () => !string.IsNullOrWhiteSpace(LastName));
         CopyLoginCommand = shell.Action(() => shell.Run(() =>
             shell.Desktop.Copy(RegistrationRules.Login(Login, Provider)), "Логин скопирован."));
         CopyPasswordCommand = shell.Action(() => shell.Run(() => shell.CopySecret(GetPassword())));
-        CopyBrowserProfileCommand = shell.Action(() => shell.Run(CopyBrowserProfile), () => ShowGmailProfile && CanRegister);
+        CopyBrowserProfileCommand = shell.Action(() => shell.Run(CopyBrowserProfile), () => CanRegister);
         CopyExtensionGuideCommand = shell.Action(() => shell.Run(
             () => shell.Desktop.Copy(ExtensionGuideTitle + Environment.NewLine + ExtensionGuide),
-            "Инструкция скопирована."), () => ShowGmailProfile && CanRegister);
+            "Инструкция скопирована."), () => CanRegister);
         SaveGmailExtensionCommand = shell.Action(() => shell.Run(() =>
         {
             var destination = WindowsDesktop.PickExtensionDestination();
@@ -66,7 +70,7 @@ public sealed class RegistrationViewModel : PageViewModel
 
             GmailExtensionArchive.Save(destination);
             shell.Report("ZIP сохранён. Распакуйте его и выберите папку GmailExtension в меню расширений браузера.");
-        }), () => ShowGmailProfile && CanRegister);
+        }), () => CanRegister);
         SaveTaskCommand = shell.Action(() => shell.RunAsync(async () =>
         {
             await SaveDraftAsync();
@@ -88,8 +92,9 @@ public sealed class RegistrationViewModel : PageViewModel
     public bool IsQueue => _mode == RegistrationMode.Queue;
     public string ListTitle => IsQueue ? "Очередь задач" : "Задачи регистрации";
     public string CreateLabel => IsQueue ? "Добавить в очередь" : "Сохранить задачу";
-    public IReadOnlyList<Choice<MailProvider>> Providers => Labels.Providers;
     public IReadOnlyList<Choice<PhoneCheck>> PhoneChecks => Labels.PhoneChecks;
+    public IReadOnlyList<Choice<string>> Genders { get; } =
+        [new("", "Не заполнять"), new("female", "Женский"), new("male", "Мужской"), new("undisclosed", "Предпочитаю не указывать")];
     public IReadOnlyList<TaskRow> Rows { get => _rows; private set => Set(ref _rows, value); }
     public int PendingCount => Rows.Count(x => x.Record.Status == RegistrationStatus.Pending);
     public int CompletedCount => Rows.Count - PendingCount;
@@ -105,16 +110,16 @@ public sealed class RegistrationViewModel : PageViewModel
                 return;
 
             DraftPassword = "";
+            (BirthDate, Gender, PhoneNumber) = ("", "", "");
             if (value is not null)
             {
-                Provider = value.Record.Provider;
                 Login = value.Record.Login;
                 FirstName = value.Record.FirstName ?? "";
                 LastName = value.Record.LastName ?? "";
                 Note = value.Record.Note;
                 Phone = value.Record.PhoneCheck;
                 Email = Login + "@" + RegistrationRules.Provider(Provider).Domain;
-                KeepPassword = ShowGmailProfile && value.Record.Status == RegistrationStatus.Pending;
+                KeepPassword = !IsQueue && value.Record.Status == RegistrationStatus.Pending;
             }
             else
             {
@@ -130,24 +135,14 @@ public sealed class RegistrationViewModel : PageViewModel
         }
     }
 
-    public MailProvider Provider
-    {
-        get => _provider;
-        set
-        {
-            if (Set(ref _provider, value))
-            {
-                Notify(nameof(DomainHint));
-                Notify(nameof(ShowGmailProfile));
-                Notify(nameof(CanEnterPassword));
-                CommandManager.InvalidateRequerySuggested();
-            }
-        }
-    }
+    private const MailProvider Provider = MailProvider.Gmail;
 
     public string Login { get => _login; set => Set(ref _login, value); }
     public string FirstName { get => _firstName; set => Set(ref _firstName, value); }
     public string LastName { get => _lastName; set => Set(ref _lastName, value); }
+    public string BirthDate { get => _birthDate; set => Set(ref _birthDate, value); }
+    public string Gender { get => _gender; set => Set(ref _gender, value); }
+    public string PhoneNumber { get => _phoneNumber; set => Set(ref _phoneNumber, value); }
     public string Email { get => _email; set => Set(ref _email, value); }
     public string Note { get => _note; set => Set(ref _note, value); }
     public PhoneCheck Phone { get => _phone; set => Set(ref _phone, value); }
@@ -158,11 +153,10 @@ public sealed class RegistrationViewModel : PageViewModel
     public bool IsPending => SelectedTask?.Record.Status == RegistrationStatus.Pending;
     public bool IsClosed => !IsDraft && !IsPending;
     public bool CanRegister => IsDraft || IsPending;
-    public bool ShowGmailProfile => !IsQueue && Provider == MailProvider.Gmail;
-    public bool CanEnterPassword => IsDraft || (IsPending && ShowGmailProfile);
+    public bool CanEnterPassword => CanRegister;
     public string FormTitle => IsDraft ? "Данные для регистрации" : $"Задача №{SelectedTask!.Record.Id}";
     public string DomainHint => "@" + RegistrationRules.Provider(Provider).Domain;
-    public string PasswordLabel => IsPending && ShowGmailProfile ? "Другой пароль (если изменили на сайте)" : "Пароль";
+    public string PasswordLabel => IsPending ? "Другой пароль (если изменили на сайте)" : "Пароль";
 
     public ICommand NewCommand { get; }
     public ICommand GenerateLoginCommand { get; }
@@ -184,7 +178,8 @@ public sealed class RegistrationViewModel : PageViewModel
         3. Включите «Режим разработчика» и нажмите «Загрузить распакованное расширение».
         4. Выберите папку GmailExtension, внутри которой лежит manifest.json, и нажмите «Выбор папки».
 
-        Вставьте данные в боковую панель расширения. Если Google запросит номер телефона, подтвердите его на сайте.
+        Если расширение уже установлено, замените файлы в его папке и нажмите «Обновить» на карточке расширения.
+        Вставьте данные в боковую панель и нажимайте «Заполнить текущий шаг». Код из SMS введите на сайте Google.
         """;
     public ICommand SaveTaskCommand { get; }
     public ICommand OpenSignupCommand { get; }
@@ -196,13 +191,13 @@ public sealed class RegistrationViewModel : PageViewModel
     internal override void Update(WorkspaceData data)
     {
         var previous = SelectedTask;
-        var entered = (Email, Note, Phone, KeepPassword, DraftPassword);
-        Rows = data.Tasks.Where(x => x.Mode == _mode).Select(x => new TaskRow(x)).ToArray();
+        var entered = (Email, Note, Phone, KeepPassword, DraftPassword, BirthDate, Gender, PhoneNumber);
+        Rows = data.Tasks.Where(x => x.Mode == _mode && x.Provider == Provider).Select(x => new TaskRow(x)).ToArray();
         if (previous is not null)
         {
             SelectedTask = Rows.FirstOrDefault(x => x.Record.Id == previous.Record.Id);
             if (previous.Record.Status == RegistrationStatus.Pending && IsPending)
-                (Email, Note, Phone, KeepPassword, DraftPassword) = entered;
+                (Email, Note, Phone, KeepPassword, DraftPassword, BirthDate, Gender, PhoneNumber) = entered;
         }
 
         Notify(nameof(PendingCount));
@@ -228,6 +223,7 @@ public sealed class RegistrationViewModel : PageViewModel
         Login = "";
         FirstName = "";
         LastName = "";
+        (BirthDate, Gender, PhoneNumber) = ("", "", "");
         DraftPassword = "";
         Email = "";
         Note = "";
@@ -250,10 +246,11 @@ public sealed class RegistrationViewModel : PageViewModel
 
     private async Task SaveDraftAsync()
     {
-        var id = await _shell.Store.AddTaskAsync(new(Provider, Login, DraftPassword,
-            ShowGmailProfile ? FirstName : null, ShowGmailProfile ? LastName : null), _mode);
+        var profile = (BirthDate, Gender, PhoneNumber);
+        var id = await _shell.Store.AddTaskAsync(new(Provider, Login, DraftPassword, FirstName, LastName), _mode);
         await _shell.ReloadAsync();
         SelectedTask = Rows.Single(x => x.Record.Id == id);
+        (BirthDate, Gender, PhoneNumber) = profile;
     }
 
     private Task FinishAsync(RegistrationStatus status) => _shell.RunAsync(async () =>
@@ -279,14 +276,30 @@ public sealed class RegistrationViewModel : PageViewModel
     {
         var password = GetPassword();
         RegistrationRules.ValidatePassword(password, MailProvider.Gmail);
+        DateOnly? birthday = null;
+        if (!string.IsNullOrWhiteSpace(BirthDate))
+        {
+            if (!DateOnly.TryParseExact(BirthDate.Trim(), "dd.MM.yyyy", CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var date) || date.Year < 1900 || date > DateOnly.FromDateTime(DateTime.Today))
+                throw new InputException("Введите действительную дату рождения в формате ДД.ММ.ГГГГ.");
+            birthday = date;
+        }
+
+        var phoneNumber = Regex.Replace(PhoneNumber, @"[\s()-]", "");
+        if (phoneNumber.Length > 0 && !Regex.IsMatch(phoneNumber, @"\A\+[1-9][0-9]{6,14}\z"))
+            throw new InputException("Введите свой номер в международном формате с плюсом и кодом страны.");
+
         var profile = JsonSerializer.Serialize(new
         {
             firstName = RegistrationRules.ProfileName(FirstName, "Имя") ?? "",
             lastName = RegistrationRules.ProfileName(LastName, "Фамилия") ?? "",
             login = RegistrationRules.Login(Login, MailProvider.Gmail),
-            password
+            password,
+            birthDate = birthday?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            gender = Gender,
+            phoneNumber
         });
-        _shell.Desktop.CopySecret("MailManager-Gmail/1:" + profile, _shell.Data.Settings.ClipboardSeconds);
+        _shell.Desktop.CopySecret("MailManager-Gmail/2:" + profile, _shell.Data.Settings.ClipboardSeconds);
         _shell.Report("Данные скопированы. Вставьте их в боковую панель Mail Manager на странице регистрации Gmail.");
     }
 
@@ -313,6 +326,8 @@ public sealed class RegistrationViewModel : PageViewModel
         }
 
         var rows = QueueImport.Parse(text, Path.GetExtension(file).Equals(".csv", StringComparison.OrdinalIgnoreCase), Provider);
+        if (rows.Any(x => x.Provider != Provider))
+            throw new InputException("Можно импортировать только задачи Gmail.");
         var count = await _shell.Store.ImportAsync(rows);
         await _shell.ReloadAsync();
         _shell.Report($"Импортировано задач: {count}.");
