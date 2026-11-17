@@ -55,6 +55,9 @@ public sealed class RegistrationViewModel : PageViewModel
             shell.Desktop.Copy(RegistrationRules.Login(Login, Provider)), "Логин скопирован."));
         CopyPasswordCommand = shell.Action(() => shell.Run(() => shell.CopySecret(GetPassword())));
         CopyBrowserProfileCommand = shell.Action(() => shell.Run(CopyBrowserProfile), () => ShowGmailProfile && CanRegister);
+        CopyExtensionGuideCommand = shell.Action(() => shell.Run(
+            () => shell.Desktop.Copy(ExtensionGuideTitle + Environment.NewLine + ExtensionGuide),
+            "Инструкция скопирована."), () => ShowGmailProfile && CanRegister);
         SaveGmailExtensionCommand = shell.Action(() => shell.Run(() =>
         {
             var destination = WindowsDesktop.PickExtensionDestination();
@@ -170,7 +173,19 @@ public sealed class RegistrationViewModel : PageViewModel
     public ICommand CopyLoginCommand { get; }
     public ICommand CopyPasswordCommand { get; }
     public ICommand CopyBrowserProfileCommand { get; }
+    public ICommand CopyExtensionGuideCommand { get; }
     public ICommand SaveGmailExtensionCommand { get; }
+
+    public string ExtensionGuideTitle => "Как установить расширение";
+
+    public string ExtensionGuide => """
+        1. Распакуйте GmailExtension.zip.
+        2. В адресной строке браузера откройте chrome://extensions в Chrome или edge://extensions в Edge.
+        3. Включите «Режим разработчика» и нажмите «Загрузить распакованное расширение».
+        4. Выберите папку GmailExtension, внутри которой лежит manifest.json, и нажмите «Выбор папки».
+
+        Вставьте данные в боковую панель расширения. Если Google запросит номер телефона, подтвердите его на сайте.
+        """;
     public ICommand SaveTaskCommand { get; }
     public ICommand OpenSignupCommand { get; }
     public ICommand NextCommand { get; }

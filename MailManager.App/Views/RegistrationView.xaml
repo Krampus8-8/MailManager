@@ -77,20 +77,17 @@
                                 Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Margin="0,2,0,0"
                                 Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
                         <StackPanel Margin="0,7,0,4" Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}">
-                            <TextBlock Text="Как установить расширение" Style="{StaticResource FieldTitle}"/>
-                            <TextBlock Style="{StaticResource MutedText}">
-                                <Run Text="1. Распакуйте GmailExtension.zip."/>
-                                <LineBreak/>
-                                <Run Text="2. В адресной строке браузера откройте chrome://extensions в Chrome или edge://extensions в Edge."/>
-                                <LineBreak/>
-                                <Run Text="3. Включите «Режим разработчика» и нажмите «Загрузить распакованное расширение»."/>
-                                <LineBreak/>
-                                <Run Text="4. Выберите папку GmailExtension, внутри которой лежит manifest.json, и нажмите «Выбор папки»."/>
-                            </TextBlock>
+                            <DockPanel Margin="0,0,0,4">
+                                <Button DockPanel.Dock="Right" Content="Скопировать всё" Command="{Binding CopyExtensionGuideCommand}"
+                                        Style="{StaticResource LinkButton}" Padding="4,2" MinHeight="26" Margin="6,0,0,0"
+                                        AutomationProperties.Name="Скопировать всю инструкцию по установке расширения"/>
+                                <TextBlock Text="{Binding ExtensionGuideTitle}" Style="{StaticResource FieldTitle}" Margin="0"
+                                           VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            </DockPanel>
+                            <TextBox Text="{Binding ExtensionGuide, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                                     Background="Transparent" BorderBrush="Transparent" Foreground="{StaticResource Muted}" Padding="0"
+                                     VerticalContentAlignment="Top" AutomationProperties.Name="Инструкция по установке расширения"/>
                         </StackPanel>
-                        <TextBlock Text="Вставьте данные в боковую панель расширения. Если Google запросит номер телефона, подтвердите его на сайте."
-                                   Style="{StaticResource MutedText}" Margin="0,7,0,0"
-                                   Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
                         <TextBlock Text="Заполните форму в браузере и пройдите проверки сервиса."
                                    Style="{StaticResource MutedText}" Margin="0,7,0,0"
                                    Visibility="{Binding ShowGmailProfile, Converter={StaticResource HiddenWhen}}"/>
