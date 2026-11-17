@@ -73,7 +73,10 @@
                             <Button Content="Копировать для браузера" Command="{Binding CopyBrowserProfileCommand}" Margin="7,0,0,6"
                                     Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
                         </WrapPanel>
-                        <TextBlock Text="В Chrome или Edge вставьте данные в боковую панель расширения Mail Manager. Если Google запросит номер телефона, подтвердите его на сайте."
+                        <Button Content="Скачать расширение для Chrome и Edge ↗" Command="{Binding DownloadGmailExtensionCommand}"
+                                Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Margin="0,2,0,0"
+                                Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
+                        <TextBlock Text="Вставьте данные в боковую панель расширения. Если Google запросит номер телефона, подтвердите его на сайте."
                                    Style="{StaticResource MutedText}" Margin="0,7,0,0"
                                    Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
                         <TextBlock Text="Заполните форму в браузере и пройдите проверки сервиса."
