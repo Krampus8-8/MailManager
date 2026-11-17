@@ -32,6 +32,15 @@ internal sealed class WindowsDesktop
         OverwritePrompt = true
     } is { } dialog && dialog.ShowDialog(Application.Current.MainWindow) == true ? dialog.FileName : null;
 
+    internal static string? PickExtensionDestination() => new SaveFileDialog
+    {
+        Title = "Сохранить расширение для Chrome и Edge",
+        Filter = "ZIP-архив (*.zip)|*.zip",
+        FileName = "GmailExtension.zip",
+        AddExtension = true,
+        OverwritePrompt = true
+    } is { } dialog && dialog.ShowDialog(Application.Current.MainWindow) == true ? dialog.FileName : null;
+
     internal void Copy(string value) => Clipboard.SetText(value);
 
     internal void CopySecret(string value, int seconds) => _secrets.Copy(value, seconds);

@@ -6,10 +6,12 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AssemblyName>MailManager</AssemblyName>
     <ApplicationIcon>Resources/MailManager.ico</ApplicationIcon>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="Resources/MailManager.ico" />
+    <EmbeddedResource Include="../GmailExtension/*.js;../GmailExtension/*.json;../GmailExtension/*.css;../GmailExtension/*.html"
+                      LogicalName="MailManager.GmailExtension.%(Filename)%(Extension)" />
     <ProjectReference Include="../MailManager.Core/MailManager.Core.csproj" />
     <ProjectReference Include="../MailManager.Data/MailManager.Data.csproj" />
   </ItemGroup>

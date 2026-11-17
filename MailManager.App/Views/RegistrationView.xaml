@@ -73,7 +73,7 @@
                             <Button Content="Копировать для браузера" Command="{Binding CopyBrowserProfileCommand}" Margin="7,0,0,6"
                                     Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
                         </WrapPanel>
-                        <Button Content="Скачать расширение для Chrome и Edge ↗" Command="{Binding DownloadGmailExtensionCommand}"
+                        <Button Content="Сохранить расширение для Chrome и Edge…" Command="{Binding SaveGmailExtensionCommand}"
                                 Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Margin="0,2,0,0"
                                 Visibility="{Binding ShowGmailProfile, Converter={StaticResource VisibleWhen}}"/>
                         <TextBlock Text="Вставьте данные в боковую панель расширения. Если Google запросит номер телефона, подтвердите его на сайте."

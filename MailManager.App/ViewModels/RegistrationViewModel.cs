@@ -11,8 +11,6 @@ namespace MailManager.App.ViewModels;
 
 public sealed class RegistrationViewModel : PageViewModel
 {
-    private static readonly Uri GmailExtensionDownload = new("https://github.com/Krampus8-8/MailManager/releases/download/v1.1.0/GmailExtension.zip");
-
     private readonly ShellViewModel _shell;
     private readonly RegistrationMode _mode;
     private IReadOnlyList<TaskRow> _rows = [];
@@ -57,8 +55,15 @@ public sealed class RegistrationViewModel : PageViewModel
             shell.Desktop.Copy(RegistrationRules.Login(Login, Provider)), "Логин скопирован."));
         CopyPasswordCommand = shell.Action(() => shell.Run(() => shell.CopySecret(GetPassword())));
         CopyBrowserProfileCommand = shell.Action(() => shell.Run(CopyBrowserProfile), () => ShowGmailProfile && CanRegister);
-        DownloadGmailExtensionCommand = shell.Action(() => shell.Run(() => shell.Desktop.Open(GmailExtensionDownload)),
-            () => ShowGmailProfile && CanRegister);
+        SaveGmailExtensionCommand = shell.Action(() => shell.Run(() =>
+        {
+            var destination = WindowsDesktop.PickExtensionDestination();
+            if (destination is null)
+                return;
+
+            GmailExtensionArchive.Save(destination);
+            shell.Report("Расширение сохранено. Распакуйте ZIP и загрузите папку с manifest.json в Chrome или Edge.");
+        }), () => ShowGmailProfile && CanRegister);
         SaveTaskCommand = shell.Action(() => shell.RunAsync(async () =>
         {
             await SaveDraftAsync();
@@ -165,7 +170,7 @@ public sealed class RegistrationViewModel : PageViewModel
     public ICommand CopyLoginCommand { get; }
     public ICommand CopyPasswordCommand { get; }
     public ICommand CopyBrowserProfileCommand { get; }
-    public ICommand DownloadGmailExtensionCommand { get; }
+    public ICommand SaveGmailExtensionCommand { get; }
     public ICommand SaveTaskCommand { get; }
     public ICommand OpenSignupCommand { get; }
     public ICommand NextCommand { get; }
