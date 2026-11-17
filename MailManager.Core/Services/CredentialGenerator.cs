@@ -12,12 +12,24 @@ public sealed class CredentialGenerator
 
     private static readonly string[] Surnames =
         ["Belov", "Karelin", "Kovalenko", "Lebedev", "Moroz", "Orlov", "Romanenko", "Smirnov", "Sokolov", "Volkov"];
+    private static readonly string[] HandleStarts =
+        ["alto", "echo", "iris", "jade", "luna", "mint", "nova", "onyx", "rune", "sage", "velo", "zest"];
+    private static readonly string[] HandleWords =
+        ["amber", "atlas", "bloom", "cloud", "comet", "coral", "ember", "fjord", "glint", "grove", "orbit", "pearl",
+         "pixel", "reef", "river", "solar", "spark", "stone", "storm", "tango", "trail", "tulip", "vivid", "wave"];
 
     public RegistrationName Name()
     {
         var first = Names[RandomNumberGenerator.GetInt32(Names.Length)];
         var last = Surnames[RandomNumberGenerator.GetInt32(Surnames.Length)];
         return new(char.ToUpperInvariant(first[0]) + first[1..], last);
+    }
+
+    public DateOnly SampleBirthDate(DateOnly today)
+    {
+        var earliest = today.AddYears(-40);
+        var latest = today.AddYears(-20);
+        return earliest.AddDays(RandomNumberGenerator.GetInt32(latest.DayNumber - earliest.DayNumber + 1));
     }
 
     public string Password(PasswordOptions options)
@@ -53,13 +65,10 @@ public sealed class CredentialGenerator
         Span<char> candidate = stackalloc char[length];
         for (var attempt = 0; attempt < 128; attempt++)
         {
-            // Яндекс требует начальную букву даже для числового варианта.
-            var prefix = pattern == LoginPattern.Name
-                ? Names[RandomNumberGenerator.GetInt32(Names.Length)]
-                : provider == MailProvider.Yandex ? Pick("abcdefghijklmnopqrstuvwxyz").ToString() : "";
-            var prefixLength = Math.Min(prefix.Length, length - 3);
-            prefix.AsSpan(0, prefixLength).CopyTo(candidate);
-            for (var i = prefixLength; i < candidate.Length; i++)
+            var prefixLength = provider == MailProvider.Gmail && pattern == LoginPattern.Name
+                ? WriteGmailHandle(candidate[..^2])
+                : WriteLegacyPrefix(candidate, provider, pattern);
+            for (var i = prefixLength; i < length; i++)
                 candidate[i] = Pick(Digits);
 
             var login = new string(candidate);
@@ -68,6 +77,35 @@ public sealed class CredentialGenerator
         }
 
         throw new InputException("Свободный локальный логин не найден. Увеличьте длину или смените тип.");
+    }
+
+    private static int WriteGmailHandle(Span<char> handle)
+    {
+        var start = HandleStarts[RandomNumberGenerator.GetInt32(HandleStarts.Length)];
+        start.AsSpan().CopyTo(handle);
+        var written = start.Length;
+        if (handle.Length - written >= 4 && RandomNumberGenerator.GetInt32(2) == 0)
+            handle[written++] = '.';
+
+        while (written < handle.Length)
+        {
+            var word = HandleWords[RandomNumberGenerator.GetInt32(HandleWords.Length)];
+            var count = Math.Min(word.Length, handle.Length - written);
+            word.AsSpan(0, count).CopyTo(handle[written..]);
+            written += count;
+        }
+        return written;
+    }
+
+    private static int WriteLegacyPrefix(Span<char> candidate, MailProvider provider, LoginPattern pattern)
+    {
+        // Яндекс требует начальную букву даже для числового варианта.
+        var prefix = pattern == LoginPattern.Name
+            ? Names[RandomNumberGenerator.GetInt32(Names.Length)]
+            : provider == MailProvider.Yandex ? Pick("abcdefghijklmnopqrstuvwxyz").ToString() : "";
+        var length = Math.Min(prefix.Length, candidate.Length - 3);
+        prefix.AsSpan(0, length).CopyTo(candidate);
+        return length;
     }
 
     private static char Pick(string alphabet) => alphabet[RandomNumberGenerator.GetInt32(alphabet.Length)];

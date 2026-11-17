@@ -33,8 +33,13 @@
                                          MaxLength="100" AutomationProperties.Name="Фамилия"/>
                             </DockPanel>
                             <TextBlock Text="Дата рождения (ДД.ММ.ГГГГ)" Style="{StaticResource FieldTitle}" Margin="0,11,0,6"/>
-                            <TextBox Text="{Binding BirthDate, UpdateSourceTrigger=PropertyChanged}" MaxLength="10"
-                                     AutomationProperties.Name="Дата рождения (ДД.ММ.ГГГГ)"/>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Сгенерировать" Command="{Binding GenerateBirthDateCommand}"
+                                        Margin="6,0,0,0" AutomationProperties.Name="Сгенерировать пример даты рождения"/>
+                                <TextBox Text="{Binding BirthDate, UpdateSourceTrigger=PropertyChanged}" MaxLength="10"
+                                         AutomationProperties.Name="Дата рождения (ДД.ММ.ГГГГ)"/>
+                            </DockPanel>
+                            <TextBlock Text="Для регистрации укажите свою дату рождения." Style="{StaticResource MutedText}" Margin="0,5,0,0"/>
                             <TextBlock Text="Пол" Style="{StaticResource FieldTitle}" Margin="0,11,0,6"/>
                             <ComboBox ItemsSource="{Binding Genders}" SelectedValue="{Binding Gender}" AutomationProperties.Name="Пол"/>
                         </StackPanel>
@@ -52,6 +57,8 @@
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Content="Копировать" Command="{Binding CopyPasswordCommand}" Margin="6,0,0,0"
                                     AutomationProperties.Name="Копировать пароль"/>
+                            <Button DockPanel.Dock="Right" Content="Показать" Command="{Binding ShowPasswordCommand}" Margin="6,0,0,0"
+                                    AutomationProperties.Name="Показать пароль"/>
                             <Grid>
                                 <PasswordBox x:Name="DraftPasswordBox" MaxLength="128" PasswordChanged="DraftPasswordChanged"
                                              AutomationProperties.Name="{Binding PasswordLabel}"
@@ -62,7 +69,7 @@
                             </Grid>
                         </DockPanel>
                         <WrapPanel Margin="0,9,0,0" Visibility="{Binding IsDraft, Converter={StaticResource VisibleWhen}}">
-                            <Button Content="Сгенерировать имя, логин и пароль" Command="{Binding GenerateProfileCommand}" Margin="0,0,5,4"/>
+                            <Button Content="Сгенерировать данные" Command="{Binding GenerateProfileCommand}" Margin="0,0,5,4"/>
                             <Button Style="{StaticResource LinkButton}" Content="Сгенерировать логин" Command="{Binding GenerateLoginCommand}"/>
                             <Button Style="{StaticResource LinkButton}" Content="Сгенерировать пароль" Command="{Binding GeneratePasswordCommand}"/>
                         </WrapPanel>

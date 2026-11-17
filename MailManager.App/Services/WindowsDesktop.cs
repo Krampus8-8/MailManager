@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using Microsoft.Win32;
 
 namespace MailManager.App.Services;
@@ -13,6 +15,38 @@ internal sealed class WindowsDesktop
     internal bool Confirm(string message, string title) =>
         MessageBox.Show(Application.Current.MainWindow, message, title, MessageBoxButton.YesNo,
             MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
+
+    internal void ShowPassword(string password)
+    {
+        var owner = Application.Current.MainWindow;
+        var close = new Button { Content = "Закрыть", IsCancel = true, IsDefault = true, HorizontalAlignment = HorizontalAlignment.Right };
+        var value = new TextBlock
+        {
+            Text = password,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 18,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 18)
+        };
+        var content = new StackPanel { Margin = new Thickness(20) };
+        content.Children.Add(value);
+        content.Children.Add(close);
+        var dialog = new Window
+        {
+            Title = "Пароль",
+            Owner = owner,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ShowInTaskbar = false,
+            ResizeMode = ResizeMode.NoResize,
+            SizeToContent = SizeToContent.Height,
+            Width = 410,
+            Background = (Brush)owner.FindResource("Canvas"),
+            Foreground = (Brush)owner.FindResource("Text"),
+            Content = content
+        };
+        dialog.Closed += (_, _) => value.Text = "";
+        dialog.ShowDialog();
+    }
 
     internal static string? PickImport() => new OpenFileDialog
     {

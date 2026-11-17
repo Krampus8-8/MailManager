@@ -89,6 +89,7 @@ public sealed class GeneratorsViewModel : PageViewModel
         }));
         CopyLoginCommand = shell.Action(() => shell.Run(() => shell.Desktop.Copy(Login), "Логин скопирован."), () => Login.Length > 0);
         CopyPasswordCommand = shell.Action(() => shell.Run(() => shell.CopySecret(_password)), () => _password.Length > 0);
+        RevealPasswordCommand = shell.Action(() => shell.Run(() => shell.Desktop.ShowPassword(_password)), () => _password.Length > 0);
     }
 
     public bool ShowPasswords { get => _showPasswords; set => Set(ref _showPasswords, value); }
@@ -102,13 +103,14 @@ public sealed class GeneratorsViewModel : PageViewModel
     public string Login { get => _login; private set => Set(ref _login, value); }
     public string PasswordHint => _password.Length == 0 ? "Пароль не сгенерирован" : "••••••••••••••••";
     public IReadOnlyList<Choice<LoginPattern>> Patterns { get; } =
-        [new(LoginPattern.Name, "Имя и цифры"), new(LoginPattern.Numeric, "Числовая комбинация")];
+        [new(LoginPattern.Name, "Слова и цифры"), new(LoginPattern.Numeric, "Числовая комбинация")];
     public ICommand LoginCommand { get; }
     public ICommand PasswordCommand { get; }
     public ICommand ShowLoginCommand { get; }
     public ICommand ShowPasswordCommand { get; }
     public ICommand CopyLoginCommand { get; }
     public ICommand CopyPasswordCommand { get; }
+    public ICommand RevealPasswordCommand { get; }
 
     internal override void Update(WorkspaceData data)
     {

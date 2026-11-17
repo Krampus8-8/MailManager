@@ -47,6 +47,28 @@ public sealed class CredentialTests
     }
 
     [TestMethod]
+    public void GmailWordLoginsUseTheRequestedLength()
+    {
+        for (var length = 6; length <= 30; length++)
+        {
+            var login = _generator.Login(MailProvider.Gmail, length, LoginPattern.Name, _ => false);
+            Assert.HasCount(length, login);
+            Assert.AreEqual(login, RegistrationRules.Login(login, MailProvider.Gmail));
+            Assert.IsTrue(login[^2..].All(char.IsAsciiDigit));
+            Assert.IsTrue(login[..^2].All(ch => char.IsAsciiLetterLower(ch) || ch == '.'));
+            Assert.IsTrue(char.IsAsciiLetterLower(login[^3]));
+        }
+    }
+
+    [TestMethod]
+    public void SampleBirthDateRespectsTheRangeOnLeapDay()
+    {
+        var today = new DateOnly(2024, 2, 29);
+        var birthDate = _generator.SampleBirthDate(today);
+        Assert.IsTrue(birthDate >= new DateOnly(1984, 2, 29) && birthDate <= new DateOnly(2004, 2, 29));
+    }
+
+    [TestMethod]
     public void EmailIsNormalizedAndMustMatchProvider()
     {
         Assert.AreEqual("alex.name@gmail.com", RegistrationRules.Email(" Alex.Name@GMAIL.COM ", MailProvider.Gmail));

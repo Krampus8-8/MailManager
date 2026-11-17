@@ -61,6 +61,7 @@
                          MinHeight="62" VerticalContentAlignment="Top" AutomationProperties.Name="Примечание"/>
                 <WrapPanel Margin="0,14,0,0">
                     <Button Content="Сохранить" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}" Margin="0,0,8,0"/>
+                    <Button Content="Показать пароль" Command="{Binding ShowPasswordCommand}" Margin="0,0,8,0"/>
                     <Button Content="Копировать пароль" Command="{Binding CopyPasswordCommand}" Margin="0,0,8,0"/>
                     <Button Content="Удалить" Style="{StaticResource DangerButton}" Command="{Binding DeleteCommand}"/>
                 </WrapPanel>

@@ -60,6 +60,8 @@
                 </UniformGrid>
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Content="Копировать" Command="{Binding CopyPasswordCommand}" Margin="6,0,0,0"/>
+                    <Button DockPanel.Dock="Right" Content="Показать" Command="{Binding RevealPasswordCommand}" Margin="6,0,0,0"
+                            AutomationProperties.Name="Показать пароль"/>
                     <TextBox Text="{Binding PasswordHint, Mode=OneWay}" IsReadOnly="True" AutomationProperties.Name="Состояние пароля"/>
                 </DockPanel>
                 <Button Content="Сгенерировать пароль" Style="{StaticResource PrimaryButton}" Command="{Binding PasswordCommand}"

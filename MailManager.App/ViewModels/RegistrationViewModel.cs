@@ -43,6 +43,7 @@ public sealed class RegistrationViewModel : PageViewModel
             Login = shell.GenerateLogin(Provider, shell.Data.Settings.LoginLength, LoginPattern.Name, Login)));
         GeneratePasswordCommand = shell.Action(() => shell.Run(() =>
             DraftPassword = shell.Generator.Password(new(shell.Data.Settings.PasswordLength))));
+        GenerateBirthDateCommand = shell.Action(() => shell.Run(() => BirthDate = GenerateBirthDate()), () => CanRegister);
         GenerateProfileCommand = shell.Action(() => shell.Run(() =>
         {
             var name = shell.Generator.Name();
@@ -52,12 +53,16 @@ public sealed class RegistrationViewModel : PageViewModel
             LastName = name.LastName;
             Login = login;
             DraftPassword = password;
+            if (string.IsNullOrWhiteSpace(BirthDate))
+                BirthDate = GenerateBirthDate();
         }), () => IsDraft);
         CopyFirstNameCommand = shell.Action(() => CopyName(FirstName, "Имя"), () => !string.IsNullOrWhiteSpace(FirstName));
         CopyLastNameCommand = shell.Action(() => CopyName(LastName, "Фамилия"), () => !string.IsNullOrWhiteSpace(LastName));
         CopyLoginCommand = shell.Action(() => shell.Run(() =>
             shell.Desktop.Copy(RegistrationRules.Login(Login, Provider)), "Логин скопирован."));
         CopyPasswordCommand = shell.Action(() => shell.Run(() => shell.CopySecret(GetPassword())));
+        ShowPasswordCommand = shell.Action(() => shell.Run(() => shell.Desktop.ShowPassword(GetPassword())),
+            () => CanRegister && (DraftPassword.Length > 0 || SelectedTask?.Record.ProtectedPassword is not null));
         CopyBrowserProfileCommand = shell.Action(() => shell.Run(CopyBrowserProfile), () => CanRegister);
         CopyExtensionGuideCommand = shell.Action(() => shell.Run(
             () => shell.Desktop.Copy(ExtensionGuideTitle + Environment.NewLine + ExtensionGuide),
@@ -161,11 +166,13 @@ public sealed class RegistrationViewModel : PageViewModel
     public ICommand NewCommand { get; }
     public ICommand GenerateLoginCommand { get; }
     public ICommand GeneratePasswordCommand { get; }
+    public ICommand GenerateBirthDateCommand { get; }
     public ICommand GenerateProfileCommand { get; }
     public ICommand CopyFirstNameCommand { get; }
     public ICommand CopyLastNameCommand { get; }
     public ICommand CopyLoginCommand { get; }
     public ICommand CopyPasswordCommand { get; }
+    public ICommand ShowPasswordCommand { get; }
     public ICommand CopyBrowserProfileCommand { get; }
     public ICommand CopyExtensionGuideCommand { get; }
     public ICommand SaveGmailExtensionCommand { get; }
@@ -261,6 +268,9 @@ public sealed class RegistrationViewModel : PageViewModel
     private Task CopyName(string value, string field) => _shell.Run(() =>
         _shell.Desktop.Copy(RegistrationRules.ProfileName(value, field) ?? throw new InputException($"Заполните поле «{field}».")),
         "Скопировано.");
+
+    private string GenerateBirthDate() => _shell.Generator.SampleBirthDate(DateOnly.FromDateTime(DateTime.Today))
+        .ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
 
     private string GetPassword()
     {

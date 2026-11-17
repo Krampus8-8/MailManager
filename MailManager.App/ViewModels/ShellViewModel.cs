@@ -286,7 +286,7 @@ public sealed class ShellViewModel : ViewModel
         Generator.Login(provider, length, pattern, login =>
         {
             var key = RegistrationRules.LoginKey(provider, login);
-            return login == previous ||
+            return (previous is not null && RegistrationRules.LoginKey(provider, previous.Trim().ToLowerInvariant()) == key) ||
                 Data.Accounts.Any(x => x.Provider == provider && RegistrationRules.LoginKey(provider, x.Email.Split('@', 2)[0]) == key) ||
                 Data.Tasks.Any(x => x.Provider == provider && x.Status == RegistrationStatus.Pending &&
                     RegistrationRules.LoginKey(provider, x.Login) == key);

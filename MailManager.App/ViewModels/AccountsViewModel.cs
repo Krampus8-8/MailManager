@@ -39,6 +39,9 @@ public sealed class AccountsViewModel : PageViewModel
         }), () => Selected is not null);
         CopyPasswordCommand = shell.Action(() => shell.Run(() => shell.CopySecret(Selected?.Record.ProtectedPassword)),
             () => Selected?.Record.ProtectedPassword is not null);
+        ShowPasswordCommand = shell.Action(() => shell.Run(() =>
+            shell.Desktop.ShowPassword(shell.Protector.Unprotect(Selected!.Record.ProtectedPassword!))),
+            () => Selected?.Record.ProtectedPassword is not null);
     }
 
     public string Search { get => _search; set { if (Set(ref _search, value)) ApplyFilters(); } }
@@ -85,6 +88,7 @@ public sealed class AccountsViewModel : PageViewModel
     public ICommand SaveCommand { get; }
     public ICommand DeleteCommand { get; }
     public ICommand CopyPasswordCommand { get; }
+    public ICommand ShowPasswordCommand { get; }
 
     internal override void Update(WorkspaceData data)
     {
