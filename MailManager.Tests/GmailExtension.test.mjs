@@ -79,11 +79,12 @@ test("clipboard payload round trips Unicode names and rejects unrelated text", (
 });
 
 test("the panel accepts both clipboard formats and explains an empty clipboard", async () => {
-    const elements = new Map(["#profile", "#status", "#fill", "#clear", "#version"].map(id => [id, {
+    const elements = new Map(["#profile", "#status", "#fill", "#clear", "#version", "#paste"].map(id => [id, {
         listeners: {},
         addEventListener(name, listener) { this.listeners[name] = listener; }
     }]));
     globalThis.document = { querySelector: selector => elements.get(selector) };
+    Object.defineProperty(globalThis, "navigator", { configurable: true, value: { clipboard: { readText: async () => "" } } });
     globalThis.chrome = {
         runtime: { getManifest: () => ({ version: "1.2.1" }) },
         tabs: { query: async () => [{ id: 1, url: firstStep }], onRemoved: { addListener() {} } }
@@ -96,7 +97,8 @@ test("the panel accepts both clipboard formats and explains an empty clipboard",
     try {
         await import("../GmailExtension/panel.js");
         assert.equal(elements.get("#version").textContent, "Расширение 1.2.1");
-        await paste("");
+        elements.get("#profile").value = "";
+        await elements.get("#paste").listeners.click();
         assert.match(elements.get("#status").textContent, /Буфер обмена пуст/u);
         await paste(JSON.stringify(profile));
         assert.match(elements.get("#status").textContent, /Формат не распознан/u);

@@ -86,7 +86,7 @@
                             <Button Content="Копировать для браузера" Command="{Binding CopyBrowserProfileCommand}" Margin="7,0,0,6"/>
                         </WrapPanel>
                         <WrapPanel Margin="0,2,0,0">
-                            <Button Content="Сохранить расширение…" Command="{Binding SaveGmailExtensionCommand}"
+                            <Button Content="Сохранить расширение 1.2.2…" Command="{Binding SaveGmailExtensionCommand}"
                                     Style="{StaticResource LinkButton}" Margin="0,0,7,0"/>
                             <Button Content="Копировать для расширения 1.1" Command="{Binding CopyLegacyBrowserProfileCommand}"
                                     Style="{StaticResource LinkButton}"

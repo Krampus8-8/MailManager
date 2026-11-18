@@ -26,49 +26,48 @@ function reset(message) {
     status.textContent = message;
 }
 
-input.addEventListener("input", () => {
-    input.value = "";
-});
-
-input.addEventListener("paste", async event => {
-    event.preventDefault();
-    const text = event.clipboardData?.getData("text/plain") ?? "";
+async function acceptProfile(text) {
     if (!text.trim()) {
         reset("Буфер обмена пуст. Скопируйте данные в Mail Manager и сразу вставьте их сюда.");
         return;
     }
     let profile;
     try {
-        profile = readProfile(text);
+        profile = readProfile(text.trim());
     } catch {
-        reset("Формат не распознан. Нажмите «Копировать для браузера» в Mail Manager и вставьте данные ещё раз.");
+        reset("Формат не распознан. Используйте кнопку «Копировать для браузера» в Mail Manager.");
         return;
     }
 
-    reset("Проверяем вкладку регистрации…");
-    const request = revision;
-    try {
-        const tab = await activeTab();
-        if (request !== revision) {
-            return;
-        }
-        if (tab?.id == null || !isSignupPage(tab.url)) {
-            status.textContent = "Откройте регистрацию Gmail и нажмите значок Mail Manager на этой вкладке.";
-            return;
-        }
+    reset("Данные приняты. Откройте шаг регистрации и нажмите «Заполнить текущий шаг».");
+    pending = { profile, tabId: null, deadline: Date.now() + retention };
+    expiration = setTimeout(() => reset("Срок истёк. Скопируйте данные ещё раз."), retention);
+    input.placeholder = "Данные приняты";
+    fill.disabled = running;
+    clear.disabled = false;
+}
 
-        pending = { tabId: tab.id, profile, deadline: Date.now() + retention };
-        expiration = setTimeout(() => reset("Срок истёк. Скопируйте данные из Mail Manager ещё раз."), retention);
-        status.textContent = "Данные готовы. Нажмите «Заполнить текущий шаг».";
-        fill.disabled = running;
-        clear.disabled = false;
-    } catch {
-        if (request === revision) {
-            status.textContent = "Не удалось проверить вкладку. Откройте боковую панель через значок расширения на странице Gmail.";
-        }
+input.addEventListener("input", () => {
+    const text = input.value;
+    input.value = "";
+    if (text) void acceptProfile(text);
+});
+
+input.addEventListener("paste", event => {
+    const text = event.clipboardData?.getData("text/plain");
+    if (text) {
+        event.preventDefault();
+        void acceptProfile(text);
     }
 });
 
+document.querySelector("#paste").addEventListener("click", async () => {
+    try {
+        await acceptProfile(await navigator.clipboard.readText());
+    } catch {
+        status.textContent = "Браузер запретил чтение буфера. Нажмите поле и вставьте данные через Ctrl+V.";
+    }
+});
 fill.addEventListener("click", async () => {
     const current = pending;
     if (!current || running) {
@@ -86,11 +85,12 @@ fill.addEventListener("click", async () => {
         if (pending !== current || Date.now() >= current.deadline) {
             return;
         }
-        if (tab?.id !== current.tabId || !isSignupPage(tab.url)) {
+        if (tab?.id == null || (current.tabId !== null && tab.id !== current.tabId) || !isSignupPage(tab.url)) {
             status.textContent = "Вернитесь на ту же вкладку регистрации Gmail.";
             return;
         }
 
+        current.tabId = tab.id;
         const [result] = await chrome.scripting.executeScript({
             target: { tabId: tab.id, frameIds: [0] },
             func: fillSignupFields,
