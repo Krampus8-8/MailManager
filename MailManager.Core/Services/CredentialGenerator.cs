@@ -66,7 +66,7 @@ public sealed class CredentialGenerator
         for (var attempt = 0; attempt < 128; attempt++)
         {
             var prefixLength = provider == MailProvider.Gmail && pattern == LoginPattern.Name
-                ? WriteGmailHandle(candidate[..^2])
+                ? WriteGmailHandle(candidate[..^Math.Min(5, length - 4)])
                 : WriteLegacyPrefix(candidate, provider, pattern);
             for (var i = prefixLength; i < length; i++)
                 candidate[i] = Pick(Digits);

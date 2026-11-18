@@ -54,9 +54,10 @@ public sealed class CredentialTests
             var login = _generator.Login(MailProvider.Gmail, length, LoginPattern.Name, _ => false);
             Assert.HasCount(length, login);
             Assert.AreEqual(login, RegistrationRules.Login(login, MailProvider.Gmail));
-            Assert.IsTrue(login[^2..].All(char.IsAsciiDigit));
-            Assert.IsTrue(login[..^2].All(ch => char.IsAsciiLetterLower(ch) || ch == '.'));
-            Assert.IsTrue(char.IsAsciiLetterLower(login[^3]));
+            var digits = Math.Min(5, length - 4);
+            Assert.IsTrue(login[^digits..].All(char.IsAsciiDigit));
+            Assert.IsTrue(login[..^digits].All(ch => char.IsAsciiLetterLower(ch) || ch == '.'));
+            Assert.IsTrue(char.IsAsciiLetterLower(login[^(digits + 1)]));
         }
     }
 
