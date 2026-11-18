@@ -1,9 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Mail Manager · Gmail",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Заполняет поля текущего шага регистрации Gmail данными из Mail Manager.",
-  "permissions": ["clipboardRead", "activeTab", "scripting", "sidePanel"],
+  "permissions": ["clipboardRead", "scripting", "sidePanel"],
+  "host_permissions": ["https://accounts.google.com/*"],
+  "content_scripts": [{
+    "matches": ["https://accounts.google.com/v3/signin/identifier*", "https://accounts.google.com/v2/signin/identifier*", "https://accounts.google.com/signin/v2/identifier*", "https://accounts.google.com/signin/identifier*"],
+    "js": ["personal-account.js"]
+  }],
   "background": { "service_worker": "background.js" },
   "action": { "default_title": "Mail Manager · Gmail" },
   "side_panel": { "default_path": "panel.html" }

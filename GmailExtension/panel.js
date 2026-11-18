@@ -12,7 +12,7 @@ let running = false;
 let revision = 0;
 
 async function activeTab() {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     return tab;
 }
 
@@ -85,8 +85,12 @@ fill.addEventListener("click", async () => {
         if (pending !== current || Date.now() >= current.deadline) {
             return;
         }
-        if (tab?.id == null || (current.tabId !== null && tab.id !== current.tabId) || !isSignupPage(tab.url)) {
-            status.textContent = "Вернитесь на ту же вкладку регистрации Gmail.";
+        if (tab?.id == null || !isSignupPage(tab.url)) {
+            status.textContent = "Откройте форму создания аккаунта Google. В Gmail нажмите «Добавить аккаунт», затем «Создать аккаунт».";
+            return;
+        }
+        if (current.tabId !== null && tab.id !== current.tabId && tab.openerTabId !== current.tabId) {
+            status.textContent = "Открыта другая вкладка регистрации. Чтобы использовать её, вставьте данные заново.";
             return;
         }
 
@@ -103,7 +107,7 @@ fill.addEventListener("click", async () => {
         }
     } catch {
         if (pending === current) {
-            status.textContent = "Нажмите значок Mail Manager на вкладке Gmail и повторите. Поля также можно скопировать по одному.";
+            status.textContent = "Проверьте, что расширению разрешён доступ к accounts.google.com, и повторите заполнение.";
         }
     } finally {
         running = false;

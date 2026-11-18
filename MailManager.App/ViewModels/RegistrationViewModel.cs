@@ -87,7 +87,7 @@ public sealed class RegistrationViewModel : PageViewModel
         {
             if (IsDraft)
                 await SaveDraftAsync();
-            shell.Desktop.Open(RegistrationRules.Provider(Provider).Signup);
+            shell.Desktop.Open(new Uri("https://mail.google.com/"));
         }), () => IsDraft || IsPending);
         NextCommand = new UiCommand(_ => Next(), _ => _shell.CanInteract && PendingCount > 0);
         ImportCommand = shell.Action(() => shell.RunAsync(ImportAsync));
@@ -188,7 +188,9 @@ public sealed class RegistrationViewModel : PageViewModel
         4. Выберите папку GmailExtension, внутри которой лежит manifest.json, и нажмите «Выбор папки».
 
         Чтобы обновить расширение, замените файлы в установленной папке GmailExtension и нажмите значок перезагрузки на карточке в Chrome или Edge.
-        Вставьте данные в боковую панель и нажимайте «Заполнить текущий шаг». Код из SMS введите на сайте Google.
+        В Gmail нажмите на аватар, затем «Добавить аккаунт». На странице Google нажмите «Создать аккаунт».
+        Расширение выберет «Для личного использования», если видит этот пункт. Вставьте данные в панель и заполняйте шаги по очереди.
+        Код из SMS введите на сайте Google.
         """;
     public ICommand SaveTaskCommand { get; }
     public ICommand OpenSignupCommand { get; }
